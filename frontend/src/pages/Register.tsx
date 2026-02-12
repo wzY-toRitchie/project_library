@@ -2,15 +2,23 @@ import React from 'react';
 import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { User, Lock, Mail } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import api from '../api';
 
 const { Title, Text } = Typography;
+
+interface RegisterFormValues {
+    username: string;
+    email: string;
+    password: string;
+    confirm: string;
+}
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = React.useState(false);
 
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: RegisterFormValues) => {
         setLoading(true);
         try {
             await api.post('/auth/signup', {
@@ -21,9 +29,20 @@ const Register: React.FC = () => {
             });
             message.success('注册成功，请登录！');
             navigate('/login');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Registration failed:', error);
-            message.error(error.response?.data || '注册失败，请稍后再试');
+            let errorMessage = '注册失败，请稍后再试';
+            if (axios.isAxiosError(error)) {
+                const data = error.response?.data;
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data && typeof data.message === 'string') {
+                    errorMessage = data.message;
+                } else if (data && Array.isArray(data.errors) && data.errors[0]?.defaultMessage) {
+                    errorMessage = data.errors[0].defaultMessage;
+                }
+            }
+            message.error(errorMessage);
         } finally {
             setLoading(false);
         }

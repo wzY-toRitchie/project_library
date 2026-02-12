@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface User {
     id: number;
@@ -20,8 +20,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
-        const savedUser = localStorage.getItem('user');
-        return savedUser ? JSON.parse(savedUser) : null;
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                const parsedUser = JSON.parse(savedUser);
+                // Validate if user has required fields for new interface
+                if (parsedUser && Array.isArray(parsedUser.roles)) {
+                    return parsedUser;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse user from localStorage', error);
+        }
+        localStorage.removeItem('user'); // Clear invalid data
+        return null;
     });
 
     const login = (userData: User) => {

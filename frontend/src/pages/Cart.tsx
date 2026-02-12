@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table, Button, Typography, Space, Card, Empty, message } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +8,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 
 const { Title, Text } = Typography;
+
+interface CartItem {
+    id: number;
+    title: string;
+    author: string;
+    price: number;
+    coverImage?: string;
+    quantity: number;
+}
 
 const Cart: React.FC = () => {
     const { cartItems, removeFromCart, updateQuantity, clearCart, totalPrice } = useCart();
@@ -46,12 +56,12 @@ const Cart: React.FC = () => {
         }
     };
 
-    const columns = [
+    const columns: ColumnsType<CartItem> = [
         {
             title: '图书信息',
             dataIndex: 'title',
             key: 'title',
-            render: (_: string, record: any) => (
+            render: (_: string, record: CartItem) => (
                 <Space>
                     <img 
                         src={record.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'} 
@@ -74,7 +84,7 @@ const Cart: React.FC = () => {
         {
             title: '数量',
             key: 'quantity',
-            render: (_: any, record: any) => (
+            render: (_: unknown, record: CartItem) => (
                 <Space>
                     <Button 
                         icon={<Minus size={14} />} 
@@ -93,12 +103,12 @@ const Cart: React.FC = () => {
         {
             title: '小计',
             key: 'subtotal',
-            render: (_: any, record: any) => <Text strong type="danger">¥{(record.price * record.quantity).toFixed(2)}</Text>,
+            render: (_: unknown, record: CartItem) => <Text strong type="danger">¥{(record.price * record.quantity).toFixed(2)}</Text>,
         },
         {
             title: '操作',
             key: 'action',
-            render: (_: any, record: any) => (
+            render: (_: unknown, record: CartItem) => (
                 <Button 
                     type="text" 
                     danger 

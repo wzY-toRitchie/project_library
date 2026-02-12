@@ -2,17 +2,23 @@ import React from 'react';
 import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { User, Lock } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
+
+interface LoginFormValues {
+    username: string;
+    password: string;
+}
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
     const [loading, setLoading] = React.useState(false);
 
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: LoginFormValues) => {
         setLoading(true);
         try {
             const response = await api.post('/auth/signin', values);
@@ -21,7 +27,10 @@ const Login: React.FC = () => {
             navigate('/');
         } catch (error) {
             console.error('Login failed:', error);
-            message.error('用户名或密码错误');
+            const errorMessage = axios.isAxiosError(error)
+                ? (typeof error.response?.data === 'string' ? error.response?.data : '用户名或密码错误')
+                : '用户名或密码错误';
+            message.error(errorMessage);
         } finally {
             setLoading(false);
         }
