@@ -3,6 +3,7 @@ package com.bookstore.service;
 import com.bookstore.entity.Book;
 import com.bookstore.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -17,12 +18,20 @@ public class BookService {
         return bookRepository.findAll();
     }
 
+    public List<Book> getAllBooks(Sort sort) {
+        return bookRepository.findAll(sort);
+    }
+
     public Optional<Book> getBookById(Long id) {
         return bookRepository.findById(id);
     }
 
     public List<Book> getBooksByCategory(Long categoryId) {
         return bookRepository.findByCategoryId(categoryId);
+    }
+
+    public List<Book> getBooksByCategory(Long categoryId, Sort sort) {
+        return bookRepository.findByCategoryId(categoryId, sort);
     }
 
     public List<Book> searchBooks(String title) {

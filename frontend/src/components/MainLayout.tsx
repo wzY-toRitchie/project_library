@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -52,10 +52,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         <div className="flex items-center gap-3 min-w-fit">
                             {isAuthenticated ? (
                                 <div className="flex items-center gap-4">
-                                    <div className="text-sm font-medium">
+                                    <div 
+                                        className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+                                        onClick={() => navigate('/profile')}
+                                    >
                                         欢迎, {user?.username}
                                     </div>
-                                    {user?.roles?.includes('ADMIN') && (
+                                    {(user?.roles?.includes('ADMIN') || user?.roles?.includes('ROLE_ADMIN')) && (
                                          <button 
                                             onClick={() => navigate('/admin')}
                                             className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"

@@ -7,6 +7,9 @@ interface User {
     roles: string[];
     accessToken: string;
     tokenType: string;
+    fullName?: string;
+    phoneNumber?: string;
+    address?: string;
 }
 
 interface AuthContextType {

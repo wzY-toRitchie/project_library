@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Row, Col, Typography, Button, Space, Tag, Divider, Spin, message } from 'antd';
+import { Row, Col, Typography, Button, Space, Tag, Divider, Spin, message, Rate } from 'antd';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 import api from '../api';
 import type { Book } from '../types';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -14,6 +15,7 @@ const BookDetail: React.FC = () => {
     const [book, setBook] = useState<Book | null>(null);
     const [loading, setLoading] = useState(true);
     const { addToCart } = useCart();
+    const { isAuthenticated } = useAuth();
 
     useEffect(() => {
         const fetchBook = async () => {
@@ -35,6 +37,30 @@ const BookDetail: React.FC = () => {
             addToCart(book);
             message.success('已添加到购物车');
         }
+    };
+
+    const handleBuyNow = () => {
+        if (!book) return;
+        if (!isAuthenticated) {
+            message.warning('请先登录后再购买');
+            navigate('/login');
+            return;
+        }
+        navigate('/checkout', {
+            state: {
+                items: [
+                    {
+                        id: book.id,
+                        title: book.title,
+                        author: book.author,
+                        price: book.price,
+                        quantity: 1,
+                        coverImage: book.coverImage
+                    }
+                ],
+                totalPrice: book.price
+            }
+        });
     };
 
     if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
@@ -59,7 +85,13 @@ const BookDetail: React.FC = () => {
                         <div>
                             <Tag color="blue">{book.category?.name || '未分类'}</Tag>
                             <Title level={1} style={{ marginTop: '12px' }}>{book.title}</Title>
-                            <Text type="secondary" style={{ fontSize: '18px' }}>作者：{book.author}</Text>
+                            <Space direction="vertical" size="small">
+                                <Text type="secondary" style={{ fontSize: '18px' }}>作者：{book.author}</Text>
+                                <Space>
+                                    <Rate disabled allowHalf value={book.rating || 5} />
+                                    <Text type="secondary">({book.rating || 5}分)</Text>
+                                </Space>
+                            </Space>
                         </div>
 
                         <div>
@@ -88,7 +120,7 @@ const BookDetail: React.FC = () => {
                             >
                                 加入购物车
                             </Button>
-                            <Button size="large" style={{ height: '50px', padding: '0 40px' }}>
+                            <Button size="large" style={{ height: '50px', padding: '0 40px' }} onClick={handleBuyNow}>
                                 立即购买
                             </Button>
                         </Space>

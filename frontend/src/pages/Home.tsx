@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import type { Book, Category } from '../types';
@@ -10,14 +10,83 @@ const Home: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+    const [sortOption, setSortOption] = useState('newest');
     const { addToCart } = useCart();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const searchQuery = searchParams.get('search');
 
+    const getSortParams = useCallback(() => {
+        let sortBy = 'createTime';
+        let direction = 'desc';
+        if (sortOption === 'price_asc') {
+            sortBy = 'price';
+            direction = 'asc';
+        } else if (sortOption === 'price_desc') {
+            sortBy = 'price';
+            direction = 'desc';
+        } else if (sortOption === 'rating') {
+            sortBy = 'rating';
+            direction = 'desc';
+        }
+        return { sortBy, direction };
+    }, [sortOption]);
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            const response = await api.get('/categories');
+            setCategories(response.data);
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+        }
+    }, []);
+
+    const fetchBooks = useCallback(async () => {
+        setLoading(true);
+        try {
+            const { sortBy, direction } = getSortParams();
+            const response = await api.get(`/books?sortBy=${sortBy}&direction=${direction}`);
+            setBooks(response.data);
+        } catch (error) {
+            console.error('Failed to fetch books:', error);
+            message.error('加载书籍失败');
+        } finally {
+            setLoading(false);
+        }
+    }, [getSortParams]);
+
+    const fetchBooksByCategory = useCallback(async (categoryId: number) => {
+        setLoading(true);
+        try {
+            const { sortBy, direction } = getSortParams();
+            const response = await api.get(`/books/category/${categoryId}?sortBy=${sortBy}&direction=${direction}`);
+            setBooks(response.data);
+        } catch (error) {
+            console.error('Failed to fetch books by category:', error);
+            message.error('加载分类书籍失败');
+        } finally {
+            setLoading(false);
+        }
+    }, [getSortParams]);
+
+    const handleSearch = useCallback(async (query: string) => {
+        setLoading(true);
+        try {
+            // Search usually sorts by relevance, but we can respect sort if backend supports it.
+            // For now, simple search.
+            const response = await api.get(`/books/search?title=${encodeURIComponent(query)}`);
+            setBooks(response.data);
+        } catch (error) {
+            console.error('Search failed:', error);
+            message.error('搜索失败');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         fetchCategories();
-    }, []);
+    }, [fetchCategories]);
 
     useEffect(() => {
         if (searchQuery) {
@@ -27,70 +96,32 @@ const Home: React.FC = () => {
         } else {
             fetchBooks();
         }
-    }, [selectedCategory, searchQuery]);
-
-    const fetchCategories = async () => {
-        try {
-            const response = await api.get('/categories');
-            setCategories(response.data);
-        } catch (error) {
-            console.error('Failed to fetch categories:', error);
-        }
-    };
-
-    const fetchBooks = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/books');
-            setBooks(response.data);
-        } catch (error) {
-            console.error('Failed to fetch books:', error);
-            message.error('加载书籍失败');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchBooksByCategory = async (categoryId: number) => {
-        setLoading(true);
-        try {
-            const response = await api.get(`/books/category/${categoryId}`);
-            setBooks(response.data);
-        } catch (error) {
-            console.error('Failed to fetch books by category:', error);
-            message.error('加载分类书籍失败');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSearch = async (query: string) => {
-        setLoading(true);
-        try {
-            const response = await api.get(`/books/search?title=${encodeURIComponent(query)}`);
-            setBooks(response.data);
-        } catch (error) {
-            console.error('Search failed:', error);
-            message.error('搜索失败');
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [fetchBooks, fetchBooksByCategory, handleSearch, searchQuery, selectedCategory, sortOption]);
 
     const handleAddToCart = (book: Book) => {
         addToCart(book);
         message.success(`${book.title} 已加入购物车`);
     };
 
-    // Helper to render stars (placeholder for now as Book doesn't have rating)
-    const renderStars = () => (
-        <div className="flex items-center gap-1 mb-3">
-            {[1, 2, 3, 4, 5].map((star) => (
-                <span key={star} className="material-symbols-outlined text-yellow-400 text-sm">star</span>
-            ))}
-            <span className="text-xs text-gray-400 ml-1">(42)</span>
-        </div>
-    );
+    const renderStars = (rating: number = 5.0) => {
+        return (
+            <div className="flex items-center gap-0.5 mb-3">
+                {[1, 2, 3, 4, 5].map((star) => {
+                    const isFilled = star <= Math.round(rating);
+                    return (
+                        <span 
+                            key={star} 
+                            className={`material-symbols-outlined text-sm ${isFilled ? 'text-yellow-400 fill-1' : 'text-gray-300'}`}
+                            style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+                        >
+                            star
+                        </span>
+                    );
+                })}
+                <span className="text-xs text-gray-400 ml-1">({rating})</span>
+            </div>
+        );
+    };
 
     return (
         <div className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -156,10 +187,15 @@ const Home: React.FC = () => {
                         </h2>
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">排序：</span>
-                            <select className="text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark rounded-md focus:ring-primary focus:border-primary p-1">
-                                <option>热门</option>
-                                <option>价格：从低到高</option>
-                                <option>最新上架</option>
+                            <select 
+                                value={sortOption}
+                                onChange={(e) => setSortOption(e.target.value)}
+                                className="text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark rounded-md focus:ring-primary focus:border-primary p-1 outline-none"
+                            >
+                                <option value="newest">最新上架</option>
+                                <option value="rating">好评优先</option>
+                                <option value="price_asc">价格：从低到高</option>
+                                <option value="price_desc">价格：从高到低</option>
                             </select>
                         </div>
                     </div>
@@ -192,7 +228,7 @@ const Home: React.FC = () => {
                                         <div className="mb-auto">
                                             <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1 text-lg mb-1" title={book.title}>{book.title}</h3>
                                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{book.author}</p>
-                                            {renderStars()}
+                                            {renderStars(book.rating)}
                                         </div>
                                         <div className="mt-3 flex items-center justify-between">
                                             <span className="text-lg font-bold text-primary">¥{book.price}</span>

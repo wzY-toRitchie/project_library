@@ -44,4 +44,9 @@ public class OrderService {
             return orderRepository.save(order);
         }).orElseThrow(() -> new RuntimeException("Order not found"));
     }
+
+    @Transactional
+    public void deleteOrder(Long id) {
+        orderRepository.deleteById(id);
+    }
 }

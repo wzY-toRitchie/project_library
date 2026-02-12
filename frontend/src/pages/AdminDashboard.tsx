@@ -1,266 +1,265 @@
-import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../api';
-import type { Book, Category } from '../types';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { message } from 'antd';
 
-const { Title } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
+interface DashboardOrderItem {
+    quantity: number;
+    book?: {
+        id: number;
+        title?: string;
+        author?: string;
+    };
+}
+
+interface DashboardOrder {
+    id: number;
+    totalPrice: number | string;
+    status: string;
+    createTime?: string;
+    items?: DashboardOrderItem[];
+}
+
+interface DashboardUser {
+    id: number;
+    username: string;
+    email: string;
+    createTime?: string;
+}
+
+interface DashboardBook {
+    id: number;
+    title: string;
+    author: string;
+    stock: number;
+}
+
+interface AdminSettingsState {
+    storeName: string;
+    supportEmail: string;
+    supportPhone: string;
+    lowStockThreshold: number;
+    dashboardRange: '6m' | '12m';
+}
+
+const defaultSettings: AdminSettingsState = {
+    storeName: 'JavaBooks',
+    supportEmail: 'support@javabooks.com',
+    supportPhone: '400-123-4567',
+    lowStockThreshold: 10,
+    dashboardRange: '6m'
+};
 
 const AdminDashboard: React.FC = () => {
-    const [books, setBooks] = useState<Book[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [orders, setOrders] = useState<DashboardOrder[]>([]);
+    const [users, setUsers] = useState<DashboardUser[]>([]);
+    const [books, setBooks] = useState<DashboardBook[]>([]);
+    const [settings, setSettings] = useState<AdminSettingsState>(defaultSettings);
     const [loading, setLoading] = useState(false);
-    const [isModalVisible, setIsModalVisible] = useState(false);
-    const [editingBook, setEditingBook] = useState<Book | null>(null);
-    const [form] = Form.useForm();
-    const { user } = useAuth();
-    const navigate = useNavigate();
 
     useEffect(() => {
-        if (!user || !user.roles.includes('ADMIN')) {
-            message.error('无权访问管理员后台');
-            navigate('/');
-            return;
-        }
-        fetchBooks();
-        fetchCategories();
-    }, [user, navigate]);
-
-    const fetchBooks = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/books');
-            setBooks(response.data);
-        } catch {
-            message.error('获取图书列表失败');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCategories = async () => {
-        try {
-            const response = await api.get('/categories');
-            setCategories(response.data);
-        } catch (error) {
-            console.error('Failed to fetch categories:', error);
-        }
-    };
-
-    const handleAdd = () => {
-        setEditingBook(null);
-        form.resetFields();
-        setIsModalVisible(true);
-    };
-
-    const handleEdit = (record: Book) => {
-        setEditingBook(record);
-        form.setFieldsValue({
-            ...record,
-            categoryId: record.category?.id
-        });
-        setIsModalVisible(true);
-    };
-
-    const handleDelete = async (id: number) => {
-        try {
-            await api.delete(`/books/${id}`);
-            message.success('删除成功');
-            fetchBooks();
-        } catch {
-            message.error('删除失败');
-        }
-    };
-
-    const handleOk = async () => {
-        try {
-            const values = await form.validateFields();
-            const bookData = {
-                ...values,
-                category: categories.find(c => c.id === values.categoryId)
-            };
-
-            if (editingBook) {
-                await api.put(`/books/${editingBook.id}`, bookData);
-                message.success('更新成功');
-            } else {
-                await api.post('/books', bookData);
-                message.success('添加成功');
+        const fetchDashboard = async () => {
+            setLoading(true);
+            try {
+                const [ordersRes, usersRes, booksRes, settingsRes] = await Promise.all([
+                    api.get('/orders'),
+                    api.get('/users'),
+                    api.get('/books'),
+                    api.get('/settings')
+                ]);
+                setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+                setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+                setBooks(Array.isArray(booksRes.data) ? booksRes.data : []);
+                setSettings({ ...defaultSettings, ...settingsRes.data });
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                message.error('仪表盘数据加载失败');
+                setSettings(defaultSettings);
+            } finally {
+                setLoading(false);
             }
-            setIsModalVisible(false);
-            fetchBooks();
-        } catch (error) {
-            console.error('Operation failed:', error);
-            message.error('操作失败');
-        }
-    };
+        };
+        fetchDashboard();
+    }, []);
 
-    const columns: ColumnsType<Book> = [
-        {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-            width: 80,
-        },
-        {
-            title: '封面',
-            dataIndex: 'coverImage',
-            key: 'coverImage',
-            render: (text: string) => <img src={text} alt="cover" style={{ width: 40, height: 60, objectFit: 'cover' }} />,
-            width: 100,
-        },
-        {
-            title: '标题',
-            dataIndex: 'title',
-            key: 'title',
-        },
-        {
-            title: '作者',
-            dataIndex: 'author',
-            key: 'author',
-        },
-        {
-            title: '价格',
-            dataIndex: 'price',
-            key: 'price',
-            render: (price: number) => `¥${price}`,
-        },
-        {
-            title: '库存',
-            dataIndex: 'stock',
-            key: 'stock',
-        },
-        {
-            title: '分类',
-            dataIndex: 'category',
-            key: 'category',
-            render: (category: Category) => category?.name || '未分类',
-        },
-        {
-            title: '操作',
-            key: 'action',
-            render: (_: unknown, record: Book) => (
-                <Space size="middle">
-                    <Button icon={<Edit size={16} />} onClick={() => handleEdit(record)}>
-                        编辑
-                    </Button>
-                    <Popconfirm
-                        title="确定要删除这本书吗?"
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="是"
-                        cancelText="否"
-                    >
-                        <Button danger icon={<Trash2 size={16} />}>
-                            删除
-                        </Button>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+    const revenueOrders = useMemo(() => orders.filter(order => order.status !== 'CANCELLED'), [orders]);
+    const totalRevenue = useMemo(() => revenueOrders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0), [revenueOrders]);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const newUsersThisMonth = useMemo(() => users.filter(user => {
+        if (!user.createTime) return false;
+        const date = new Date(user.createTime);
+        return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+    }).length, [users, currentMonth, currentYear]);
+
+    const lowStockThreshold = settings.lowStockThreshold || 10;
+    const stockAlerts = useMemo(() => books.filter(book => book.stock <= lowStockThreshold).length, [books, lowStockThreshold]);
+
+    const rangeMonths = settings.dashboardRange === '12m' ? 12 : 6;
+    const monthlySales = useMemo(() => {
+        const data = Array.from({ length: rangeMonths }, (_, index) => {
+            const date = new Date(currentYear, currentMonth - (rangeMonths - 1 - index), 1);
+            return { month: date.getMonth(), year: date.getFullYear(), total: 0 };
+        });
+        revenueOrders.forEach(order => {
+            if (!order.createTime) return;
+            const date = new Date(order.createTime);
+            data.forEach(bucket => {
+                if (bucket.month === date.getMonth() && bucket.year === date.getFullYear()) {
+                    bucket.total += Number(order.totalPrice || 0);
+                }
+            });
+        });
+        return data;
+    }, [revenueOrders, rangeMonths, currentMonth, currentYear]);
+
+    const currentMonthRevenue = monthlySales[monthlySales.length - 1]?.total || 0;
+    const previousMonthRevenue = monthlySales[monthlySales.length - 2]?.total || 0;
+    const revenueChange = previousMonthRevenue === 0 ? (currentMonthRevenue > 0 ? 100 : 0) : ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+
+    const topBooks = useMemo(() => {
+        const stats = new Map<string, { key: string; title: string; author?: string; sold: number }>();
+        orders.forEach(order => {
+            order.items?.forEach(item => {
+                const title = item.book?.title || '未知图书';
+                const key = `${item.book?.id || title}`;
+                const current = stats.get(key) || { key, title, author: item.book?.author, sold: 0 };
+                current.sold += item.quantity;
+                stats.set(key, current);
+            });
+        });
+        return Array.from(stats.values()).sort((a, b) => b.sold - a.sold).slice(0, 5);
+    }, [orders]);
+
+    const maxMonthly = Math.max(...monthlySales.map(item => item.total), 1);
 
     return (
-        <div style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <Title level={2}>图书管理</Title>
-                <Button type="primary" icon={<Plus size={16} />} onClick={handleAdd}>
-                    添加图书
-                </Button>
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 h-full">
+            <div className="max-w-7xl mx-auto flex flex-col gap-8">
+                {/* Stats Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Total Sales */}
+                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">总收入</p>
+                                <h3 className="text-3xl font-bold mt-2">¥{totalRevenue.toFixed(2)}</h3>
+                            </div>
+                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400">
+                                <span className="material-symbols-outlined">payments</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-auto">
+                            <span className="material-symbols-outlined text-green-600 text-sm">trending_up</span>
+                            <span className="text-sm font-medium text-green-600">{revenueChange >= 0 ? `+${revenueChange.toFixed(1)}%` : `${revenueChange.toFixed(1)}%`}</span>
+                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">较上月</span>
+                        </div>
+                    </div>
+                    
+                    {/* Total Users */}
+                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">用户总数</p>
+                                <h3 className="text-3xl font-bold mt-2">{users.length}</h3>
+                            </div>
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                                <span className="material-symbols-outlined">group_add</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-auto">
+                            <span className="material-symbols-outlined text-green-600 text-sm">trending_up</span>
+                            <span className="text-sm font-medium text-green-600">+{newUsersThisMonth}</span>
+                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">本月新增</span>
+                        </div>
+                    </div>
+                    
+                    {/* Stock Alerts */}
+                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36 relative overflow-hidden group cursor-pointer hover:border-red-200 transition-colors">
+                        <div className="absolute right-0 top-0 h-full w-1 bg-red-500"></div>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">库存预警</p>
+                                <h3 className="text-3xl font-bold mt-2 text-[#111418] dark:text-white">{stockAlerts}</h3>
+                            </div>
+                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
+                                <span className="material-symbols-outlined">warning</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-auto">
+                            <span className="text-sm font-medium text-red-600">库存不足</span>
+                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">- {lowStockThreshold} 以下</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Charts & Lists Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-[500px]">
+                    {/* Chart Section */}
+                    <div className="lg:col-span-2 bg-white dark:bg-[#1a2632] rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col">
+                        <div className="p-6 border-b border-[#e5e7eb] dark:border-[#2a3b4d] flex justify-between items-center">
+                            <h3 className="font-bold text-lg">月度销售趋势</h3>
+                            <div className="flex gap-2">
+                                <button className={`text-xs font-medium px-3 py-1 rounded-full ${settings.dashboardRange === '6m' ? 'bg-primary/10 text-primary' : 'text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d]'}`}>近6个月</button>
+                                <button className={`text-xs font-medium px-3 py-1 rounded-full ${settings.dashboardRange === '12m' ? 'bg-primary/10 text-primary' : 'text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d]'}`}>近1年</button>
+                            </div>
+                        </div>
+                        <div className="flex-1 p-6 flex flex-col justify-end">
+                            <div className="flex h-full items-end gap-4 md:gap-8 justify-between px-2">
+                                {monthlySales.map((item, index) => {
+                                    const height = Math.max(4, Math.round((item.total / maxMonthly) * 100));
+                                    return (
+                                        <div key={`${item.year}-${item.month}-${index}`} className="flex flex-col items-center gap-2 group w-full">
+                                            <div className="relative w-full bg-[#f0f2f4] dark:bg-[#2a3b4d] rounded-t-lg h-64 overflow-hidden">
+                                                <div className="absolute bottom-0 w-full bg-primary/80 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style={{ height: `${height}%` }}></div>
+                                            </div>
+                                            <span className="text-xs font-medium text-[#637588]">{item.month + 1}月</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Top Ranking Section */}
+                    <div className="lg:col-span-1 bg-white dark:bg-[#1a2632] rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col overflow-hidden">
+                        <div className="p-6 border-b border-[#e5e7eb] dark:border-[#2a3b4d]">
+                            <h3 className="font-bold text-lg">热销图书榜</h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-[#f9fafb] dark:bg-[#2a3b4d] text-[#637588] font-medium sticky top-0">
+                                    <tr>
+                                        <th className="px-4 py-3 w-12 text-center">#</th>
+                                        <th className="px-4 py-3">书名</th>
+                                        <th className="px-4 py-3 text-right">销量</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#e5e7eb] dark:divide-[#2a3b4d]">
+                                    {topBooks.map((book, index) => (
+                                        <tr key={book.key} className="group hover:bg-gray-50 dark:hover:bg-[#23303e] transition-colors">
+                                            <td className="px-4 py-3 text-center font-bold text-[#111418] dark:text-white">{index + 1}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-[#111418] dark:text-white line-clamp-1">{book.title}</span>
+                                                    <span className="text-xs text-[#637588]">{book.author || '-'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-medium text-[#111418] dark:text-white">{book.sold.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                    {!loading && topBooks.length === 0 && (
+                                        <tr>
+                                            <td colSpan={3} className="px-4 py-6 text-center text-sm text-[#637588]">暂无数据</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <Table 
-                columns={columns} 
-                dataSource={books} 
-                rowKey="id" 
-                loading={loading}
-                pagination={{ pageSize: 10 }} 
-            />
-
-            <Modal
-                title={editingBook ? "编辑图书" : "添加图书"}
-                open={isModalVisible}
-                onOk={handleOk}
-                onCancel={() => setIsModalVisible(false)}
-                width={800}
-            >
-                <Form
-                    form={form}
-                    layout="vertical"
-                >
-                    <Form.Item
-                        name="title"
-                        label="图书标题"
-                        rules={[{ required: true, message: '请输入图书标题' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Space style={{ display: 'flex', width: '100%' }} size="large">
-                        <Form.Item
-                            name="author"
-                            label="作者"
-                            rules={[{ required: true, message: '请输入作者' }]}
-                            style={{ flex: 1 }}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item
-                            name="categoryId"
-                            label="分类"
-                            rules={[{ required: true, message: '请选择分类' }]}
-                            style={{ flex: 1 }}
-                        >
-                            <Select placeholder="选择分类">
-                                {categories.map(c => (
-                                    <Option key={c.id} value={c.id}>{c.name}</Option>
-                                ))}
-                            </Select>
-                        </Form.Item>
-                    </Space>
-
-                    <Space style={{ display: 'flex', width: '100%' }} size="large">
-                        <Form.Item
-                            name="price"
-                            label="价格"
-                            rules={[{ required: true, message: '请输入价格' }]}
-                            style={{ flex: 1 }}
-                        >
-                            <InputNumber
-                                style={{ width: '100%' }}
-                                formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                parser={value => (value ?? '').replace(/¥\s?|(,*)/g, '')}
-                            />
-                        </Form.Item>
-                        <Form.Item
-                            name="stock"
-                            label="库存"
-                            rules={[{ required: true, message: '请输入库存数量' }]}
-                            style={{ flex: 1 }}
-                        >
-                            <InputNumber style={{ width: '100%' }} min={0} />
-                        </Form.Item>
-                    </Space>
-
-                    <Form.Item
-                        name="description"
-                        label="简介"
-                    >
-                        <TextArea rows={4} />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="coverImage"
-                        label="封面图片链接"
-                    >
-                        <Input />
-                    </Form.Item>
-                </Form>
-            </Modal>
         </div>
     );
 };

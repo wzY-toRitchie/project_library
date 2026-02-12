@@ -3,6 +3,7 @@ package com.bookstore.controller;
 import com.bookstore.entity.Book;
 import com.bookstore.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,8 +17,11 @@ public class BookController {
     private BookService bookService;
 
     @GetMapping
-    public List<Book> getAllBooks() {
-        return bookService.getAllBooks();
+    public List<Book> getAllBooks(
+            @RequestParam(required = false, defaultValue = "createTime") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String direction) {
+        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
+        return bookService.getAllBooks(sort);
     }
 
     @GetMapping("/{id}")
@@ -28,8 +32,12 @@ public class BookController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<Book> getBooksByCategory(@PathVariable Long categoryId) {
-        return bookService.getBooksByCategory(categoryId);
+    public List<Book> getBooksByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(required = false, defaultValue = "createTime") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String direction) {
+        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
+        return bookService.getBooksByCategory(categoryId, sort);
     }
 
     @GetMapping("/search")

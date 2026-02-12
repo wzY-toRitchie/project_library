@@ -38,6 +38,9 @@ public class Book {
     @Column(name = "create_time")
     private LocalDateTime createTime;
 
+    @Column(columnDefinition = "DOUBLE DEFAULT 5.0")
+    private Double rating = 5.0;
+
     @PrePersist
     protected void onCreate() {
         createTime = LocalDateTime.now();

@@ -1,6 +1,8 @@
+com\bookstore\payload\request\UpdateProfileRequest.class
 com\bookstore\entity\Book.class
 com\bookstore\service\BookService.class
 com\bookstore\service\OrderService.class
+com\bookstore\service\ReviewService.class
 com\bookstore\entity\Order.class
 com\bookstore\service\UserService.class
 com\bookstore\controller\CategoryController.class
@@ -18,7 +20,11 @@ com\bookstore\entity\User.class
 com\bookstore\payload\request\SignupRequest.class
 com\bookstore\controller\UserController.class
 com\bookstore\controller\BookController.class
+com\bookstore\payload\request\UpdatePasswordRequest.class
+com\bookstore\controller\ReviewController.class
+com\bookstore\repository\ReviewRepository.class
 com\bookstore\entity\OrderItem.class
+com\bookstore\entity\Review.class
 com\bookstore\controller\OrderController.class
 com\bookstore\controller\AuthController.class
 com\bookstore\repository\UserRepository.class

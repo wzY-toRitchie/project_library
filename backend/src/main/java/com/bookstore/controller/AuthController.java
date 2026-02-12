@@ -61,6 +61,9 @@ public class AuthController {
           userDetails.getId(),
           userDetails.getUsername(),
           userDetails.getEmail(),
+          userDetails.getFullName(),
+          userDetails.getPhoneNumber(),
+          userDetails.getAddress(),
           roles));
     } catch (Exception e) {
       logger.error("Authentication failed", e);
