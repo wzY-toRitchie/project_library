@@ -4,11 +4,13 @@ import com.bookstore.entity.User;
 import com.bookstore.payload.request.UpdatePasswordRequest;
 import com.bookstore.payload.request.UpdateProfileRequest;
 import com.bookstore.payload.response.MessageResponse;
+import com.bookstore.payload.response.UserSummaryResponse;
 import com.bookstore.security.services.UserDetailsImpl;
 import com.bookstore.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +26,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody @NonNull User user) {
         try {
             return ResponseEntity.ok(userService.register(user));
         } catch (RuntimeException e) {
@@ -33,26 +35,31 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        return userService.login(credentials.get("username"), credentials.get("password"))
+    public ResponseEntity<?> login(@RequestBody @NonNull Map<String, String> credentials) {
+        String username = credentials.get("username");
+        String password = credentials.get("password");
+        if (username == null || password == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Username and password are required"));
+        }
+        return userService.login(username, password)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(401).build());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        return userService.getUserById(id)
+    public ResponseEntity<UserSummaryResponse> getUserById(@PathVariable @NonNull Long id) {
+        return userService.getUserSummary(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public List<UserSummaryResponse> getAllUsers() {
+        return userService.getAllUserSummaries();
     }
 
     @PatchMapping("/{id}/role")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestParam String role) {
+    public ResponseEntity<User> updateUserRole(@PathVariable @NonNull Long id, @RequestParam @NonNull String role) {
         try {
             return ResponseEntity.ok(userService.updateRole(id, role));
         } catch (RuntimeException e) {
@@ -61,7 +68,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<?> deleteUser(@PathVariable @NonNull Long id) {
         try {
             userService.deleteUser(id);
             return ResponseEntity.ok().build();
@@ -80,7 +87,11 @@ public class UserController {
         Object principal = authentication.getPrincipal();
         if (principal instanceof UserDetailsImpl) {
             UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            return userService.getUserById(userDetails.getId())
+            Long userId = userDetails.getId();
+            if (userId == null) {
+                return ResponseEntity.status(401).build();
+            }
+            return userService.getUserSummary(userId)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         }
@@ -89,42 +100,52 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody @NonNull UpdateProfileRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
             return ResponseEntity.status(401).build();
         }
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         try {
-            User updatedUser = userService.updateProfile(userDetails.getId(), request);
-            return ResponseEntity.ok(updatedUser);
+            User updatedUser = userService.updateProfile(userId, request);
+            UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
+            return ResponseEntity.ok(summary != null ? summary : updatedUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUserByAdmin(@PathVariable Long id,
-            @Valid @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<?> updateUserByAdmin(@PathVariable @NonNull Long id,
+            @Valid @RequestBody @NonNull UpdateProfileRequest request) {
         try {
             User updatedUser = userService.updateUserByAdmin(id, request);
-            return ResponseEntity.ok(updatedUser);
+            UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
+            return ResponseEntity.ok(summary != null ? summary : updatedUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
 
     @PutMapping("/password")
-    public ResponseEntity<?> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
+    public ResponseEntity<?> updatePassword(@Valid @RequestBody @NonNull UpdatePasswordRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
             return ResponseEntity.status(401).build();
         }
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         try {
-            userService.updatePassword(userDetails.getId(), request);
+            userService.updatePassword(userId, request);
             return ResponseEntity.ok(new MessageResponse("Password updated successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));

@@ -1,12 +1,19 @@
 package com.bookstore.service;
 
 import com.bookstore.entity.User;
+import com.bookstore.entity.Address;
+import com.bookstore.entity.Notification;
+import com.bookstore.repository.AddressRepository;
 import com.bookstore.repository.UserRepository;
+import com.bookstore.payload.response.UserSummaryResponse;
+import com.bookstore.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 
 @Service
 public class UserService {
@@ -15,22 +22,30 @@ public class UserService {
     private UserRepository userRepository;
 
     @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public User register(User user) {
+    public User register(@NonNull User user) {
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        notificationRepository.save(new Notification("USER", "新用户注册: " + user.getUsername()));
+        return savedUser;
     }
 
-    public Optional<User> login(String username, String password) {
+    public Optional<User> login(@NonNull String username, @NonNull String password) {
         return userRepository.findByUsername(username)
                 .filter(user -> passwordEncoder.matches(password, user.getPassword()));
     }
 
-    public Optional<User> getUserById(Long id) {
+    public Optional<User> getUserById(@NonNull Long id) {
         return userRepository.findById(id);
     }
 
@@ -38,18 +53,47 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public User updateRole(Long userId, String role) {
+    public List<UserSummaryResponse> getAllUserSummaries() {
+        List<User> users = userRepository.findAll();
+        return users.stream().map(user -> new UserSummaryResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getPhoneNumber(),
+                resolveDefaultAddress(user.getId()),
+                user.getRole(),
+                user.getCreateTime(),
+                addressRepository.countByUserId(user.getId()))).toList();
+    }
+
+    public Optional<UserSummaryResponse> getUserSummary(@NonNull Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> new UserSummaryResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getFullName(),
+                        user.getPhoneNumber(),
+                        resolveDefaultAddress(user.getId()),
+                        user.getRole(),
+                        user.getCreateTime(),
+                        addressRepository.countByUserId(user.getId())));
+    }
+
+    public User updateRole(@NonNull Long userId, @NonNull String role) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setRole(role);
-        return userRepository.save(user);
+        return userRepository.save(Objects.requireNonNull(user));
     }
 
-    public void deleteUser(Long userId) {
+    public void deleteUser(@NonNull Long userId) {
         userRepository.deleteById(userId);
     }
 
-    public User updateProfile(Long userId, com.bookstore.payload.request.UpdateProfileRequest request) {
+    public User updateProfile(@NonNull Long userId,
+            @NonNull com.bookstore.payload.request.UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -59,9 +103,6 @@ public class UserService {
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
-        if (request.getAddress() != null) {
-            user.setAddress(request.getAddress());
-        }
         // Email and Username updates might need validation for uniqueness if allowed
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
@@ -70,10 +111,11 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
 
-        return userRepository.save(user);
+        return userRepository.save(Objects.requireNonNull(user));
     }
 
-    public User updateUserByAdmin(Long userId, com.bookstore.payload.request.UpdateProfileRequest request) {
+    public User updateUserByAdmin(@NonNull Long userId,
+            @NonNull com.bookstore.payload.request.UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -95,14 +137,11 @@ public class UserService {
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
-        if (request.getAddress() != null) {
-            user.setAddress(request.getAddress());
-        }
-
-        return userRepository.save(user);
+        return userRepository.save(Objects.requireNonNull(user));
     }
 
-    public void updatePassword(Long userId, com.bookstore.payload.request.UpdatePasswordRequest request) {
+    public void updatePassword(@NonNull Long userId,
+            @NonNull com.bookstore.payload.request.UpdatePasswordRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -112,5 +151,11 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    private String resolveDefaultAddress(Long userId) {
+        return addressRepository.findFirstByUserIdOrderByIsDefaultDescIdAsc(userId)
+                .map(Address::getAddress)
+                .orElse(null);
     }
 }

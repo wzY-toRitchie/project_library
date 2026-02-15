@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Objects;
 
 @CrossOrigin(origins = "http://localhost:5173", maxAge = 3600, allowCredentials = "true")
 @RestController
@@ -24,7 +25,7 @@ public class UploadController {
         try {
             Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "books");
             Files.createDirectories(uploadDir);
-            String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+            String originalName = Objects.requireNonNullElse(file.getOriginalFilename(), "");
             String extension = "";
             int dotIndex = originalName.lastIndexOf('.');
             if (dotIndex >= 0) {

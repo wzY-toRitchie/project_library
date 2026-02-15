@@ -3,6 +3,7 @@ package com.bookstore.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -30,6 +31,10 @@ public class User {
     private String address;
 
     private String role; // USER, ADMIN
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Address> addresses;
 
     @Column(name = "create_time")
     private LocalDateTime createTime;
@@ -104,6 +109,14 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public List<Address> getAddresses() {
+        return addresses;
+    }
+
+    public void setAddresses(List<Address> addresses) {
+        this.addresses = addresses;
     }
 
     public LocalDateTime getCreateTime() {

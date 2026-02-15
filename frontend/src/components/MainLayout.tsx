@@ -120,8 +120,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </main>
 
              <footer className="bg-surface-light dark:bg-surface-dark border-t border-[#f0f2f4] dark:border-[#2a3441] py-8 mt-auto">
-                <div className="max-w-[1440px] mx-auto px-4 text-center text-gray-500 text-sm">
-                    在线书店 ©2026 毕业设计作品
+                <div className="max-w-[1440px] mx-auto px-4 text-center text-gray-500 text-sm flex flex-col items-center gap-2">
+                    <div>在线书店 ©2026 毕业设计作品</div>
+                    <button 
+                        onClick={() => navigate('/contact')}
+                        className="text-primary hover:underline text-sm font-medium"
+                    >
+                        联系客服
+                    </button>
                 </div>
             </footer>
         </div>

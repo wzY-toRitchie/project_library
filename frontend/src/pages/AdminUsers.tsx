@@ -10,6 +10,7 @@ interface User {
     fullName?: string;
     phoneNumber?: string;
     address?: string;
+    addressCount?: number;
     role?: string;
     createTime?: string;
 }
@@ -25,8 +26,7 @@ const AdminUsers: React.FC = () => {
         username: '',
         email: '',
         fullName: '',
-        phoneNumber: '',
-        address: ''
+        phoneNumber: ''
     });
     const { user: currentUser } = useAuth();
 
@@ -54,7 +54,8 @@ const AdminUsers: React.FC = () => {
             if (!query) return true;
             const matchesBasic = target.username?.toLowerCase().includes(query) || target.email?.toLowerCase().includes(query);
             const matchesProfile = target.fullName?.toLowerCase().includes(query) || target.phoneNumber?.toLowerCase().includes(query);
-            return Boolean(matchesBasic || matchesProfile);
+            const matchesAddress = target.address?.toLowerCase().includes(query);
+            return Boolean(matchesBasic || matchesProfile || matchesAddress);
         });
     }, [users, searchQuery, roleFilter]);
 
@@ -87,8 +88,7 @@ const AdminUsers: React.FC = () => {
             username: target.username || '',
             email: target.email || '',
             fullName: target.fullName || '',
-            phoneNumber: target.phoneNumber || '',
-            address: target.address || ''
+            phoneNumber: target.phoneNumber || ''
         });
     };
 
@@ -109,8 +109,7 @@ const AdminUsers: React.FC = () => {
                 username: editForm.username.trim(),
                 email: editForm.email.trim(),
                 fullName: editForm.fullName.trim(),
-                phoneNumber: editForm.phoneNumber.trim(),
-                address: editForm.address.trim()
+                phoneNumber: editForm.phoneNumber.trim()
             });
             message.success('用户资料已更新');
             closeEdit();
@@ -160,6 +159,7 @@ const AdminUsers: React.FC = () => {
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-20">ID</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">用户信息</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">联系方式</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">地址</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">角色</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">注册时间</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
@@ -168,11 +168,11 @@ const AdminUsers: React.FC = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-4 text-center text-slate-500">加载中...</td>
+                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">加载中...</td>
                                 </tr>
                             ) : filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-4 text-center text-slate-500">暂无用户</td>
+                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">暂无用户</td>
                                 </tr>
                             ) : (
                                 filteredUsers.map(target => (
@@ -188,6 +188,12 @@ const AdminUsers: React.FC = () => {
                                             <div className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
                                                 <span>{target.email}</span>
                                                 <span className="text-xs text-slate-400">{target.phoneNumber || '-'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+                                                <span className="line-clamp-2 max-w-[220px]">{target.address || '-'}</span>
+                                                <span className="text-xs text-slate-400">地址数量：{target.addressCount ?? 0}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -270,14 +276,6 @@ const AdminUsers: React.FC = () => {
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                             value={editForm.phoneNumber}
                             onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-2 sm:col-span-2">
-                        <label className="text-sm font-semibold text-slate-700">地址</label>
-                        <input
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            value={editForm.address}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
                         />
                     </div>
                 </div>

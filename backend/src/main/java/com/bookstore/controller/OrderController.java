@@ -4,6 +4,7 @@ import com.bookstore.entity.Order;
 import com.bookstore.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -21,24 +22,24 @@ public class OrderController {
     }
 
     @GetMapping("/user/{userId}")
-    public List<Order> getOrdersByUserId(@PathVariable Long userId) {
+    public List<Order> getOrdersByUserId(@PathVariable @NonNull Long userId) {
         return orderService.getOrdersByUserId(userId);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<Order> getOrderById(@PathVariable @NonNull Long id) {
         return orderService.getOrderById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Order createOrder(@RequestBody Order order) {
+    public Order createOrder(@RequestBody @NonNull Order order) {
         return orderService.createOrder(order);
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<Order> updateOrderStatus(@PathVariable @NonNull Long id, @RequestParam @NonNull String status) {
         try {
             return ResponseEntity.ok(orderService.updateOrderStatus(id, status));
         } catch (RuntimeException e) {
@@ -47,7 +48,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteOrder(@PathVariable Long id) {
+    public ResponseEntity<?> deleteOrder(@PathVariable @NonNull Long id) {
         try {
             orderService.deleteOrder(id);
             return ResponseEntity.ok().build();

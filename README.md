@@ -47,7 +47,7 @@
 ### 3. 初始化数据说明
 
 - 系统启动时会自动创建表结构与示例数据。
-- 示例数据包含 20 本书、多个用户、以及覆盖待支付/已支付/已发货/已完成/已取消的订单。
+- 示例数据包含 20 本书、多个用户、覆盖待支付/已支付/已发货/已完成/已取消的订单，以及示例收货地址。
 - 若数据库已有历史数据，需清空相关表或重新建库后重启后端，以重新写入示例数据。
 
 ### 4. 启动后端
@@ -73,22 +73,39 @@ npm run dev
 
 前端页面将运行在 `http://localhost:5173`。
 
-### 6. 常用构建命令
+### 6. 编译与重启指南
 
-后端打包（跳过测试）：
+当代码发生变更时，请参考以下步骤进行编译与重启：
 
-```bash
-cd backend
-mvn -q -DskipTests package
-```
+**后端 (Backend)**
 
-前端检查与构建：
+1. 停止当前运行的后端服务。
+2. 进入后端目录，清理并重新打包：
+   ```bash
+   cd backend
+   mvn clean package -DskipTests
+   ```
+3. 运行生成的 JAR 包：
+   ```bash
+   java -jar target/online-bookstore-0.0.1-SNAPSHOT.jar
+   ```
+   > 提示：如果遇到端口占用错误，请确保已关闭之前的 Java 进程，或手动终止占用 8080 端口的进程。
 
-```bash
-cd frontend
-npm run lint
-npm run build
-```
+**前端 (Frontend)**
+
+1. 进入前端目录：
+   ```bash
+   cd frontend
+   ```
+2. 重新构建（可选，用于检查构建错误）：
+   ```bash
+   npm run build
+   ```
+3. 启动开发服务器：
+   ```bash
+   npm run dev
+   ```
+   > 提示：如果默认端口 5173 被占用，Vite 会自动切换到 5174 或更高端口，请查看控制台输出的访问地址。
 
 ## 👤 默认账号
 
@@ -123,6 +140,9 @@ npm run build
   - 独立的结算页面 (Checkout)，支持查看收货地址、商品清单及支付方式选择。
   - 集成多种支付方式 UI (银行卡、微信支付、货到付款)。
 - **订单管理**: 查看历史订单状态与订单详情。
+- **收货地址管理**:
+  - 支持多地址新增、编辑、删除与默认地址设置。
+  - 后台用户管理展示默认地址与地址数量。
 - **后台管理**:
   - **图书管理增强**：
     - 新增/编辑/删除与库存维护。
@@ -145,6 +165,11 @@ npm run build
 - `POST /api/users/register` 注册
 - `POST /api/users/login` 登录
 - `GET /api/users` 后台用户列表
+- `GET /api/users/addresses` 当前用户地址列表
+- `POST /api/users/addresses` 新增收货地址
+- `PUT /api/users/addresses/{id}` 编辑收货地址
+- `PUT /api/users/addresses/{id}/default` 设置默认地址
+- `DELETE /api/users/addresses/{id}` 删除收货地址
 - `PUT /api/users/{id}` 后台编辑用户资料
 - `PATCH /api/users/{id}/role` 角色更新
 

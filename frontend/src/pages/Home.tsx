@@ -15,6 +15,7 @@ const Home: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const searchQuery = searchParams.get('search');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const getSortParams = useCallback(() => {
         let sortBy = 'createTime';
@@ -125,15 +126,35 @@ const Home: React.FC = () => {
 
     return (
         <div className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col lg:flex-row gap-8 relative">
+                {/* Mobile Sidebar Toggle */}
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className="lg:hidden fixed bottom-6 left-6 z-40 p-3 bg-primary text-white rounded-full shadow-lg"
+                    title="切换分类栏"
+                >
+                    <span className="material-symbols-outlined">category</span>
+                </button>
+
                 {/* Sidebar Navigation */}
-                <aside className="w-full lg:w-64 flex-shrink-0">
-                    <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-[#f0f2f4] dark:border-[#2a3441] sticky top-24">
-                        <div className="p-4 border-b border-[#f0f2f4] dark:border-[#2a3441]">
+                <aside className={`
+                    fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-surface-dark transform transition-transform duration-300 ease-in-out shadow-lg lg:shadow-none
+                    lg:relative lg:transform-none lg:transition-all lg:duration-300 lg:ease-in-out
+                    ${isSidebarOpen ? 'translate-x-0 lg:w-64 lg:opacity-100' : '-translate-x-full lg:w-0 lg:opacity-0 lg:overflow-hidden'}
+                `}>
+                    <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-[#f0f2f4] dark:border-[#2a3441] sticky top-24 h-full lg:h-auto overflow-y-auto lg:overflow-visible">
+                        <div className="p-4 border-b border-[#f0f2f4] dark:border-[#2a3441] flex justify-between items-center">
                             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-primary">category</span>
                                 分类
                             </h3>
+                            <button 
+                                onClick={() => setIsSidebarOpen(false)} 
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                title="收起侧边栏"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
                         </div>
                         <nav className="p-2 space-y-1">
                             <button
@@ -168,7 +189,17 @@ const Home: React.FC = () => {
                 </aside>
 
                 {/* Main Content */}
-                <div className="flex-1">
+                <div className="flex-1 transition-all duration-300">
+                    {!isSidebarOpen && (
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="hidden lg:flex items-center gap-2 mb-4 text-primary font-bold hover:underline"
+                        >
+                            <span className="material-symbols-outlined">menu_open</span>
+                            显示分类
+                        </button>
+                    )}
+
                     {/* Hero Banner */}
                     {!searchQuery && !selectedCategory && (
                         <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 shadow-md">

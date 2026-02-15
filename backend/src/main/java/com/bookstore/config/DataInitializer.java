@@ -1,10 +1,12 @@
 package com.bookstore.config;
 
+import com.bookstore.entity.Address;
 import com.bookstore.entity.Book;
 import com.bookstore.entity.Category;
 import com.bookstore.entity.Order;
 import com.bookstore.entity.OrderItem;
 import com.bookstore.entity.User;
+import com.bookstore.repository.AddressRepository;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.CategoryRepository;
 import com.bookstore.repository.OrderRepository;
@@ -18,7 +20,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Configuration
 public class DataInitializer {
@@ -28,6 +34,7 @@ public class DataInitializer {
                         BookRepository bookRepository,
                         UserRepository userRepository,
                         OrderRepository orderRepository,
+                        AddressRepository addressRepository,
                         PasswordEncoder passwordEncoder) {
                 return args -> {
                         // Initialize Users
@@ -50,259 +57,359 @@ public class DataInitializer {
                                 user.setRole("USER");
                         }
 
-                        if (admin != null && user != null) {
-                                userRepository.saveAll(Arrays.asList(admin, user));
-                        } else if (admin != null) {
-                                userRepository.save(admin);
-                        } else if (user != null) {
-                                userRepository.save(user);
+                        List<User> initialUsers = new ArrayList<>();
+                        if (admin != null) {
+                                initialUsers.add(admin);
+                        }
+                        if (user != null) {
+                                initialUsers.add(user);
+                        }
+                        if (!initialUsers.isEmpty()) {
+                                userRepository.saveAll(initialUsers);
                         }
 
                         List<User> extraUsers = new ArrayList<>();
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "alice", "alice@example.com", "陈雨晴",
-                                        "13911112222", "上海市徐汇区天钥桥路", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "alice", "alice@example.com",
+                                        "陈雨晴",
+                                        "13911112222", "USER");
                         addUserIfMissing(userRepository, passwordEncoder, extraUsers, "bob", "bob@example.com", "李明哲",
-                                        "13722223333", "北京市朝阳区望京街道", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "charlie", "charlie@example.com", "王启航",
-                                        "13633334444", "广州市天河区珠江新城", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "diana", "diana@example.com", "周思敏",
-                                        "13544445555", "深圳市南山区科技园", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "edward", "edward@example.com", "郑浩然",
-                                        "13455556666", "杭州市西湖区文三路", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "frank", "frank@example.com", "赵子昂",
-                                        "13366667777", "成都市高新区天府大道", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "grace", "grace@example.com", "孙雨珊",
-                                        "13277778888", "南京市鼓楼区中山路", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "helen", "helen@example.com", "刘嘉宁",
-                                        "13188889999", "武汉市武昌区中南路", "USER");
-                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "manager", "manager@example.com", "钱泽宇",
-                                        "13099990000", "重庆市渝中区解放碑", "ADMIN");
+                                        "13722223333", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "charlie", "charlie@example.com",
+                                        "王启航",
+                                        "13633334444", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "diana", "diana@example.com",
+                                        "周思敏",
+                                        "13544445555", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "edward", "edward@example.com",
+                                        "郑浩然",
+                                        "13455556666", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "frank", "frank@example.com",
+                                        "赵子昂",
+                                        "13366667777", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "grace", "grace@example.com",
+                                        "孙雨珊",
+                                        "13277778888", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "helen", "helen@example.com",
+                                        "刘嘉宁",
+                                        "13188889999", "USER");
+                        addUserIfMissing(userRepository, passwordEncoder, extraUsers, "manager", "manager@example.com",
+                                        "钱泽宇",
+                                        "13099990000", "ADMIN");
                         if (!extraUsers.isEmpty()) {
                                 userRepository.saveAll(extraUsers);
                         }
 
-                        // Initialize Categories
-                        if (categoryRepository.count() == 0) {
-                                Category c1 = new Category();
-                                c1.setName("计算机");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("admin").orElse(null),
+                                        "管理员", "18800001111", "北京市海淀区中关村大街");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("user").orElse(null),
+                                        "示例用户", "18800002222", "上海市浦东新区世纪大道");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("alice").orElse(null),
+                                        "陈雨晴", "13911112222", "上海市徐汇区天钥桥路");
+                        addDefaultAddressIfMissing(addressRepository, userRepository.findByUsername("bob").orElse(null),
+                                        "李明哲", "13722223333", "北京市朝阳区望京街道");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("charlie").orElse(null),
+                                        "王启航", "13633334444", "广州市天河区珠江新城");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("diana").orElse(null),
+                                        "周思敏", "13544445555", "深圳市南山区科技园");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("edward").orElse(null),
+                                        "郑浩然", "13455556666", "杭州市西湖区文三路");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("frank").orElse(null),
+                                        "赵子昂", "13366667777", "成都市高新区天府大道");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("grace").orElse(null),
+                                        "孙雨珊", "13277778888", "南京市鼓楼区中山路");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("helen").orElse(null),
+                                        "刘嘉宁", "13188889999", "武汉市武昌区中南路");
+                        addDefaultAddressIfMissing(addressRepository,
+                                        userRepository.findByUsername("manager").orElse(null),
+                                        "钱泽宇", "13099990000", "重庆市渝中区解放碑");
 
-                                Category c2 = new Category();
-                                c2.setName("文学");
-
-                                Category c3 = new Category();
-                                c3.setName("历史");
-
-                                Category c4 = new Category();
-                                c4.setName("科幻");
-
-                                categoryRepository.saveAll(Arrays.asList(c1, c2, c3, c4));
-
-                                // Initialize Books
-                                if (bookRepository.count() == 0) {
-                                        Book b1 = new Book();
-                                        b1.setTitle("Java 核心技术");
-                                        b1.setAuthor("Cay S. Horstmann");
-                                        b1.setPrice(new BigDecimal("119.00"));
-                                        b1.setStock(100);
-                                        b1.setDescription("Java 领域经典著作，全面覆盖 Java 基础与高级特性。");
-                                        b1.setCategory(c1);
-                                        b1.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b2 = new Book();
-                                        b2.setTitle("深入理解计算机系统");
-                                        b2.setAuthor("Randal E. Bryant");
-                                        b2.setPrice(new BigDecimal("139.00"));
-                                        b2.setStock(50);
-                                        b2.setDescription("计算机科学领域的经典教材，从程序员视角深入解析计算机系统。");
-                                        b2.setCategory(c1);
-                                        b2.setCoverImage(
-                                                        "https://img10.360buyimg.com/n1/jfs/t1/231121/11/1440/150244/6530a61cF0f214f4e/4694460f1661601a.jpg");
-
-                                        Book b3 = new Book();
-                                        b3.setTitle("三体");
-                                        b3.setAuthor("刘慈欣");
-                                        b3.setPrice(new BigDecimal("68.00"));
-                                        b3.setStock(200);
-                                        b3.setDescription("中国科幻基石之作，讲述人类与三体文明的博弈。");
-                                        b3.setCategory(c4);
-                                        b3.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b4 = new Book();
-                                        b4.setTitle("百年孤独");
-                                        b4.setAuthor("加西亚·马尔克斯");
-                                        b4.setPrice(new BigDecimal("55.00"));
-                                        b4.setStock(80);
-                                        b4.setDescription("魔幻现实主义文学代表作，描写布恩迪亚家族七代人的传奇故事。");
-                                        b4.setCategory(c2);
-                                        b4.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b5 = new Book();
-                                        b5.setTitle("明朝那些事儿");
-                                        b5.setAuthor("当年明月");
-                                        b5.setPrice(new BigDecimal("198.00"));
-                                        b5.setStock(80);
-                                        b5.setDescription("全景式展现明朝三百年的历史风云，通俗易懂的历史巨著。");
-                                        b5.setCategory(c3);
-                                        b5.setCoverImage(
-                                                        "https://img10.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b6 = new Book();
-                                        b6.setTitle("活着");
-                                        b6.setAuthor("余华");
-                                        b6.setPrice(new BigDecimal("28.00"));
-                                        b6.setStock(150);
-                                        b6.setDescription("讲述了人如何去承受巨大的苦难，讲述了眼泪的丰富和宽广。");
-                                        b6.setCategory(c2);
-                                        b6.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/110905/23/23247/100536/62441a0eE02022830/6233342.jpg");
-
-                                        Book b7 = new Book();
-                                        b7.setTitle("算法导论");
-                                        b7.setAuthor("Thomas H. Cormen");
-                                        b7.setPrice(new BigDecimal("128.00"));
-                                        b7.setStock(60);
-                                        b7.setDescription("计算机算法领域的标准教材，被誉为算法领域的'圣经'。");
-                                        b7.setCategory(c1);
-                                        b7.setCoverImage(
-                                                        "https://img12.360buyimg.com/n1/jfs/t1/107755/26/22606/151125/62441a0eE12313123/1231312.jpg");
-
-                                        Book b8 = new Book();
-                                        b8.setTitle("人类简史");
-                                        b8.setAuthor("尤瓦尔·赫拉利");
-                                        b8.setPrice(new BigDecimal("68.00"));
-                                        b8.setStock(120);
-                                        b8.setDescription("从认知革命到科学革命，全景式回顾人类历史。");
-                                        b8.setCategory(c3);
-                                        b8.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b9 = new Book();
-                                        b9.setTitle("万历十五年");
-                                        b9.setAuthor("黄仁宇");
-                                        b9.setPrice(new BigDecimal("45.00"));
-                                        b9.setStock(90);
-                                        b9.setDescription("通过对万历十五年几个关键人物的描述，揭示大明王朝的兴衰秘密。");
-                                        b9.setCategory(c3);
-                                        b9.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b10 = new Book();
-                                        b10.setTitle("银河帝国");
-                                        b10.setAuthor("阿西莫夫");
-                                        b10.setPrice(new BigDecimal("299.00"));
-                                        b10.setStock(30);
-                                        b10.setDescription("科幻文学界的诺贝尔奖级作品，讲述人类未来两万年的历史。");
-                                        b10.setCategory(c4);
-                                        b10.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b11 = new Book();
-                                        b11.setTitle("Python编程：从入门到实践");
-                                        b11.setAuthor("Eric Matthes");
-                                        b11.setPrice(new BigDecimal("89.00"));
-                                        b11.setStock(200);
-                                        b11.setDescription("最畅销的 Python 编程教程，适合所有层次的读者。");
-                                        b11.setCategory(c1);
-                                        b11.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b12 = new Book();
-                                        b12.setTitle("代码整洁之道");
-                                        b12.setAuthor("Robert C. Martin");
-                                        b12.setPrice(new BigDecimal("79.00"));
-                                        b12.setStock(140);
-                                        b12.setDescription("软件工程经典读物，讲解如何写出清晰、可维护的代码。");
-                                        b12.setCategory(c1);
-                                        b12.setCoverImage(
-                                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
-
-                                        Book b13 = new Book();
-                                        b13.setTitle("设计模式");
-                                        b13.setAuthor("Erich Gamma");
-                                        b13.setPrice(new BigDecimal("99.00"));
-                                        b13.setStock(70);
-                                        b13.setDescription("面向对象设计模式经典书籍，介绍 23 种设计模式。");
-                                        b13.setCategory(c1);
-                                        b13.setCoverImage(
-                                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
-
-                                        Book b14 = new Book();
-                                        b14.setTitle("时间简史");
-                                        b14.setAuthor("史蒂芬·霍金");
-                                        b14.setPrice(new BigDecimal("56.00"));
-                                        b14.setStock(110);
-                                        b14.setDescription("通俗物理学经典，探索宇宙起源与时间的奥秘。");
-                                        b14.setCategory(c4);
-                                        b14.setCoverImage(
-                                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
-
-                                        Book b15 = new Book();
-                                        b15.setTitle("白夜行");
-                                        b15.setAuthor("东野圭吾");
-                                        b15.setPrice(new BigDecimal("49.00"));
-                                        b15.setStock(130);
-                                        b15.setDescription("推理与人性并重的畅销小说，故事结构精巧。");
-                                        b15.setCategory(c2);
-                                        b15.setCoverImage(
-                                                        "https://img10.360buyimg.com/n1/jfs/t1/162087/7/21395/130705/6146c0a5E34a6f7c0/04357f1340b7f217.jpg");
-
-                                        Book b16 = new Book();
-                                        b16.setTitle("解忧杂货店");
-                                        b16.setAuthor("东野圭吾");
-                                        b16.setPrice(new BigDecimal("42.00"));
-                                        b16.setStock(180);
-                                        b16.setDescription("温暖治愈的故事，展示人心的善意与救赎。");
-                                        b16.setCategory(c2);
-                                        b16.setCoverImage(
-                                                        "https://img13.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b17 = new Book();
-                                        b17.setTitle("史记");
-                                        b17.setAuthor("司马迁");
-                                        b17.setPrice(new BigDecimal("158.00"));
-                                        b17.setStock(60);
-                                        b17.setDescription("中国史学经典之作，纪传体史书的开山之作。");
-                                        b17.setCategory(c3);
-                                        b17.setCoverImage(
-                                                        "https://img10.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
-
-                                        Book b18 = new Book();
-                                        b18.setTitle("秦汉史");
-                                        b18.setAuthor("吕思勉");
-                                        b18.setPrice(new BigDecimal("68.00"));
-                                        b18.setStock(90);
-                                        b18.setDescription("系统梳理秦汉时期历史事件与制度演变。");
-                                        b18.setCategory(c3);
-                                        b18.setCoverImage(
-                                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
-
-                                        Book b19 = new Book();
-                                        b19.setTitle("银河系漫游指南");
-                                        b19.setAuthor("道格拉斯·亚当斯");
-                                        b19.setPrice(new BigDecimal("59.00"));
-                                        b19.setStock(100);
-                                        b19.setDescription("充满想象力与幽默的科幻经典。");
-                                        b19.setCategory(c4);
-                                        b19.setCoverImage(
-                                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
-
-                                        Book b20 = new Book();
-                                        b20.setTitle("机器学习实战");
-                                        b20.setAuthor("Peter Harrington");
-                                        b20.setPrice(new BigDecimal("88.00"));
-                                        b20.setStock(75);
-                                        b20.setDescription("通过实践案例掌握机器学习核心算法。");
-                                        b20.setCategory(c1);
-                                        b20.setCoverImage(
-                                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
-
-                                        bookRepository.saveAll(
-                                                        Arrays.asList(b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12,
-                                                                        b13, b14, b15, b16, b17, b18, b19, b20));
+                        List<Category> existingCategories = categoryRepository.findAll();
+                        Map<String, Category> categoriesByName = new HashMap<>();
+                        for (Category category : existingCategories) {
+                                if (category.getName() != null) {
+                                        categoriesByName.put(category.getName(), category);
                                 }
+                        }
+
+                        List<Category> categoriesToSave = new ArrayList<>();
+                        Category c1 = categoriesByName.get("计算机");
+                        if (c1 == null) {
+                                c1 = new Category();
+                                c1.setName("计算机");
+                                categoriesToSave.add(c1);
+                        }
+                        Category c2 = categoriesByName.get("文学");
+                        if (c2 == null) {
+                                c2 = new Category();
+                                c2.setName("文学");
+                                categoriesToSave.add(c2);
+                        }
+                        Category c3 = categoriesByName.get("历史");
+                        if (c3 == null) {
+                                c3 = new Category();
+                                c3.setName("历史");
+                                categoriesToSave.add(c3);
+                        }
+                        Category c4 = categoriesByName.get("科幻");
+                        if (c4 == null) {
+                                c4 = new Category();
+                                c4.setName("科幻");
+                                categoriesToSave.add(c4);
+                        }
+                        Category c5 = categoriesByName.get("心理学");
+                        if (c5 == null) {
+                                c5 = new Category();
+                                c5.setName("心理学");
+                                categoriesToSave.add(c5);
+                        }
+                        Category c6 = categoriesByName.get("经济");
+                        if (c6 == null) {
+                                c6 = new Category();
+                                c6.setName("经济");
+                                categoriesToSave.add(c6);
+                        }
+                        Category c7 = categoriesByName.get("哲学");
+                        if (c7 == null) {
+                                c7 = new Category();
+                                c7.setName("哲学");
+                                categoriesToSave.add(c7);
+                        }
+                        Category c8 = categoriesByName.get("艺术");
+                        if (c8 == null) {
+                                c8 = new Category();
+                                c8.setName("艺术");
+                                categoriesToSave.add(c8);
+                        }
+                        Category c9 = categoriesByName.get("教育");
+                        if (c9 == null) {
+                                c9 = new Category();
+                                c9.setName("教育");
+                                categoriesToSave.add(c9);
+                        }
+                        Category c10 = categoriesByName.get("管理");
+                        if (c10 == null) {
+                                c10 = new Category();
+                                c10.setName("管理");
+                                categoriesToSave.add(c10);
+                        }
+                        if (!categoriesToSave.isEmpty()) {
+                                categoryRepository.saveAll(categoriesToSave);
+                                existingCategories = categoryRepository.findAll();
+                                categoriesByName.clear();
+                                for (Category category : existingCategories) {
+                                        if (category.getName() != null) {
+                                                categoriesByName.put(category.getName(), category);
+                                        }
+                                }
+                                c1 = categoriesByName.get("计算机");
+                                c2 = categoriesByName.get("文学");
+                                c3 = categoriesByName.get("历史");
+                                c4 = categoriesByName.get("科幻");
+                                c5 = categoriesByName.get("心理学");
+                                c6 = categoriesByName.get("经济");
+                                c7 = categoriesByName.get("哲学");
+                                c8 = categoriesByName.get("艺术");
+                                c9 = categoriesByName.get("教育");
+                                c10 = categoriesByName.get("管理");
+                        }
+
+                        List<Book> existingBooks = bookRepository.findAll();
+                        Set<String> existingTitles = new HashSet<>();
+                        for (Book book : existingBooks) {
+                                if (book.getTitle() != null) {
+                                        existingTitles.add(book.getTitle().trim().toLowerCase());
+                                }
+                        }
+                        List<Book> booksToSave = new ArrayList<>();
+                        addBookIfMissing(booksToSave, existingTitles, "Java 核心技术", "Cay S. Horstmann",
+                                        new BigDecimal("119.00"), 100,
+                                        "Java 领域经典著作，全面覆盖 Java 基础与高级特性。", c1,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "深入理解计算机系统", "Randal E. Bryant",
+                                        new BigDecimal("139.00"), 50,
+                                        "计算机科学领域的经典教材，从程序员视角深入解析计算机系统。", c1,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/231121/11/1440/150244/6530a61cF0f214f4e/4694460f1661601a.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "三体", "刘慈欣", new BigDecimal("68.00"), 200,
+                                        "中国科幻基石之作，讲述人类与三体文明的博弈。", c4,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "百年孤独", "加西亚·马尔克斯", new BigDecimal("55.00"), 80,
+                                        "魔幻现实主义文学代表作，描写布恩迪亚家族七代人的传奇故事。", c2,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "明朝那些事儿", "当年明月", new BigDecimal("198.00"), 80,
+                                        "全景式展现明朝三百年的历史风云，通俗易懂的历史巨著。", c3,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "活着", "余华", new BigDecimal("28.00"), 150,
+                                        "讲述了人如何去承受巨大的苦难，讲述了眼泪的丰富和宽广。", c2,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/110905/23/23247/100536/62441a0eE02022830/6233342.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "算法导论", "Thomas H. Cormen",
+                                        new BigDecimal("128.00"), 60,
+                                        "计算机算法领域的标准教材，被誉为算法领域的'圣经'。", c1,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/107755/26/22606/151125/62441a0eE12313123/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "人类简史", "尤瓦尔·赫拉利", new BigDecimal("68.00"), 120,
+                                        "从认知革命到科学革命，全景式回顾人类历史。", c3,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "万历十五年", "黄仁宇", new BigDecimal("45.00"), 90,
+                                        "通过对万历十五年几个关键人物的描述，揭示大明王朝的兴衰秘密。", c3,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "银河帝国", "阿西莫夫", new BigDecimal("299.00"), 30,
+                                        "科幻文学界的诺贝尔奖级作品，讲述人类未来两万年的历史。", c4,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "Python编程：从入门到实践", "Eric Matthes",
+                                        new BigDecimal("89.00"), 200,
+                                        "最畅销的 Python 编程教程，适合所有层次的读者。", c1,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "代码整洁之道", "Robert C. Martin",
+                                        new BigDecimal("79.00"), 140,
+                                        "软件工程经典读物，讲解如何写出清晰、可维护的代码。", c1,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "设计模式", "Erich Gamma", new BigDecimal("99.00"),
+                                        70,
+                                        "面向对象设计模式经典书籍，介绍 23 种设计模式。", c1,
+                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "时间简史", "史蒂芬·霍金", new BigDecimal("56.00"), 110,
+                                        "通俗物理学经典，探索宇宙起源与时间的奥秘。", c4,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "白夜行", "东野圭吾", new BigDecimal("49.00"), 130,
+                                        "推理与人性并重的畅销小说，故事结构精巧。", c2,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/162087/7/21395/130705/6146c0a5E34a6f7c0/04357f1340b7f217.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "解忧杂货店", "东野圭吾", new BigDecimal("42.00"), 180,
+                                        "温暖治愈的故事，展示人心的善意与救赎。", c2,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "史记", "司马迁", new BigDecimal("158.00"), 60,
+                                        "中国史学经典之作，纪传体史书的开山之作。", c3,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "秦汉史", "吕思勉", new BigDecimal("68.00"), 90,
+                                        "系统梳理秦汉时期历史事件与制度演变。", c3,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "银河系漫游指南", "道格拉斯·亚当斯", new BigDecimal("59.00"),
+                                        100,
+                                        "充满想象力与幽默的科幻经典。", c4,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "机器学习实战", "Peter Harrington",
+                                        new BigDecimal("88.00"), 75,
+                                        "通过实践案例掌握机器学习核心算法。", c1,
+                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "Effective Java", "Joshua Bloch",
+                                        new BigDecimal("118.00"), 90,
+                                        "Java 最佳实践指南，涵盖语言特性与编程规范。", c1,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "Spring Boot 实战", "Craig Walls",
+                                        new BigDecimal("92.00"), 120,
+                                        "从零搭建 Spring Boot 应用，覆盖常用开发模式与实践。", c1,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "计算机网络：自顶向下方法", "James F. Kurose",
+                                        new BigDecimal("128.00"), 80,
+                                        "网络原理经典教材，自顶向下讲解协议与实现。", c1,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/231121/11/1440/150244/6530a61cF0f214f4e/4694460f1661601a.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "现代操作系统", "Andrew S. Tanenbaum",
+                                        new BigDecimal("135.00"), 65,
+                                        "系统讲解操作系统核心概念与实现机制。", c1,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/107755/26/22606/151125/62441a0eE12313123/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "数据库系统概念", "Abraham Silberschatz",
+                                        new BigDecimal("129.00"), 70,
+                                        "数据库理论与实践结合的经典教材。", c1,
+                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "黑客与画家", "Paul Graham", new BigDecimal("66.00"),
+                                        150,
+                                        "关于创业、编程与思考方式的随笔集。", c1,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "追风筝的人", "卡勒德·胡赛尼", new BigDecimal("45.00"), 160,
+                                        "关于友情、救赎与成长的动人故事。", c2,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/110905/23/23247/100536/62441a0eE02022830/6233342.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "平凡的世界", "路遥", new BigDecimal("98.00"), 110,
+                                        "以普通人的奋斗史描绘时代变迁。", c2,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "围城", "钱钟书", new BigDecimal("39.00"), 140,
+                                        "以幽默笔触刻画婚姻与人生的围城。", c2,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/162087/7/21395/130705/6146c0a5E34a6f7c0/04357f1340b7f217.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "红楼梦", "曹雪芹", new BigDecimal("86.00"), 100,
+                                        "中国古典文学巅峰之作，描绘家族兴衰与人情世态。", c2,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "被讨厌的勇气", "岸见一郎", new BigDecimal("45.00"), 160,
+                                        "以对话形式介绍阿德勒心理学的核心观点。", c2,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "枪炮、病菌与钢铁", "贾雷德·戴蒙德", new BigDecimal("78.00"),
+                                        95,
+                                        "从宏观视角解释人类社会发展差异的成因。", c3,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "万物简史", "比尔·布莱森", new BigDecimal("72.00"), 120,
+                                        "以通俗语言讲述科学史与自然奥秘。", c3,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "中国历代政治得失", "钱穆", new BigDecimal("46.00"), 130,
+                                        "透视中国政治制度的演变与得失。", c3,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "沙丘", "弗兰克·赫伯特", new BigDecimal("88.00"), 70,
+                                        "史诗级科幻巨作，描绘沙漠星球上的权力与信仰。", c4,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "基地", "阿西莫夫", new BigDecimal("66.00"), 85,
+                                        "经典科幻系列开篇，讲述心理史学与文明兴衰。", c4,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "雪崩", "尼尔·斯蒂芬森", new BigDecimal("79.00"), 80,
+                                        "赛博朋克经典，描绘虚拟世界与现实秩序的碰撞。", c4,
+                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "社会心理学", "戴维·迈尔斯", new BigDecimal("88.00"), 90,
+                                        "社会心理学入门经典，解释群体影响与个体行为。", c5,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "自控力", "凯利·麦格尼格尔", new BigDecimal("49.00"), 150,
+                                        "结合心理学与神经科学，提升自我控制能力。", c5,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "经济学原理", "N. Gregory Mankiw",
+                                        new BigDecimal("118.00"), 70,
+                                        "现代经济学经典教材，系统讲解供需与宏观经济。", c6,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/231121/11/1440/150244/6530a61cF0f214f4e/4694460f1661601a.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "原则", "瑞·达利欧", new BigDecimal("88.00"), 120,
+                                        "桥水基金创始人总结的工作与生活原则。", c6,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "苏菲的世界", "乔斯坦·贾德", new BigDecimal("59.00"), 120,
+                                        "以小说形式讲述西方哲学史。", c7,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "存在与时间", "马丁·海德格尔", new BigDecimal("99.00"), 40,
+                                        "20 世纪哲学重要著作，探讨存在的意义。", c7,
+                                        "https://img11.360buyimg.com/n1/jfs/t1/140989/4/272/178258/5ebf7c5eE4a4ea8fe/2e2e9c0ce3f4bf1f.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "艺术的故事", "E. H. Gombrich",
+                                        new BigDecimal("108.00"), 65,
+                                        "经典艺术史入门读物，覆盖西方艺术发展。", c8,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/162087/7/21395/130705/6146c0a5E34a6f7c0/04357f1340b7f217.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "写给大家看的设计书", "Robin Williams",
+                                        new BigDecimal("59.00"), 110,
+                                        "以易懂方式讲解设计原则与排版。", c8,
+                                        "https://img13.360buyimg.com/n1/jfs/t1/195113/16/18219/127890/611b1fa2E12c3fd2f/af16c97a8dc2b1f4.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "给教师的建议", "苏霍姆林斯基", new BigDecimal("42.00"), 130,
+                                        "教育学经典著作，聚焦教学实践与学生成长。", c9,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "教育心理学", "安妮·斯拉文", new BigDecimal("78.00"), 95,
+                                        "系统介绍教育心理学理论与教学应用。", c9,
+                                        "https://img12.360buyimg.com/n1/jfs/t1/120686/32/20974/108277/62c3d0e9E0f6c5d51/2cbbcd35d6f0a2a9.jpg");
+
+                        addBookIfMissing(booksToSave, existingTitles, "高效能人士的七个习惯", "史蒂芬·柯维", new BigDecimal("69.00"),
+                                        120,
+                                        "经典管理与自我管理读物，强调目标与习惯。", c10,
+                                        "https://img14.360buyimg.com/n1/jfs/t1/116905/35/22252/125340/62441a0eE8d88686d/1231312.jpg");
+                        addBookIfMissing(booksToSave, existingTitles, "从优秀到卓越", "Jim Collins", new BigDecimal("86.00"),
+                                        90,
+                                        "企业管理经典，研究组织持续卓越的关键因素。", c10,
+                                        "https://img10.360buyimg.com/n1/jfs/t1/162087/7/21395/130705/6146c0a5E34a6f7c0/04357f1340b7f217.jpg");
+
+                        if (!booksToSave.isEmpty()) {
+                                bookRepository.saveAll(booksToSave);
                         }
 
                         if (orderRepository.count() == 0 && bookRepository.count() > 0 && userRepository.count() > 0) {
@@ -361,7 +468,8 @@ public class DataInitializer {
                                 addOrderIfValid(orders, o7);
 
                                 Order o8 = buildOrder(grace, "COMPLETED", LocalDateTime.now().minusDays(10),
-                                                Arrays.asList(buildItem(javaCore, 1), buildItem(csApp, 1), buildItem(threeBody, 1)));
+                                                Arrays.asList(buildItem(javaCore, 1), buildItem(csApp, 1),
+                                                                buildItem(threeBody, 1)));
                                 addOrderIfValid(orders, o8);
 
                                 Order o9 = buildOrder(helen, "PENDING", LocalDateTime.now().minusHours(3),
@@ -382,7 +490,6 @@ public class DataInitializer {
                         String email,
                         String fullName,
                         String phoneNumber,
-                        String address,
                         String role) {
                 if (userRepository.existsByUsername(username)) {
                         return;
@@ -393,9 +500,56 @@ public class DataInitializer {
                 user.setEmail(email);
                 user.setFullName(fullName);
                 user.setPhoneNumber(phoneNumber);
-                user.setAddress(address);
                 user.setRole(role);
                 users.add(user);
+        }
+
+        private void addDefaultAddressIfMissing(AddressRepository addressRepository,
+                        User user,
+                        String fullName,
+                        String phoneNumber,
+                        String address) {
+                if (user == null) {
+                        return;
+                }
+                if (addressRepository.countByUserId(user.getId()) > 0) {
+                        return;
+                }
+                Address entry = new Address();
+                entry.setUser(user);
+                entry.setFullName(fullName);
+                entry.setPhoneNumber(phoneNumber);
+                entry.setAddress(address);
+                entry.setDefault(true);
+                addressRepository.save(entry);
+        }
+
+        private void addBookIfMissing(List<Book> books,
+                        Set<String> existingTitlesLower,
+                        String title,
+                        String author,
+                        BigDecimal price,
+                        int stock,
+                        String description,
+                        Category category,
+                        String coverImage) {
+                if (title == null) {
+                        return;
+                }
+                String normalizedTitle = title.trim().toLowerCase();
+                if (normalizedTitle.isEmpty() || existingTitlesLower.contains(normalizedTitle)) {
+                        return;
+                }
+                Book book = new Book();
+                book.setTitle(title);
+                book.setAuthor(author);
+                book.setPrice(price);
+                book.setStock(stock);
+                book.setDescription(description);
+                book.setCategory(category);
+                book.setCoverImage(coverImage);
+                books.add(book);
+                existingTitlesLower.add(normalizedTitle);
         }
 
         private Book findBook(List<Book> books, String title) {

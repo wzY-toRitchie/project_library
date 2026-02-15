@@ -4,21 +4,23 @@ import com.bookstore.entity.SystemSetting;
 import com.bookstore.payload.request.SystemSettingRequest;
 import com.bookstore.repository.SystemSettingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import java.util.Objects;
 
 @Service
 public class SystemSettingService {
-    private static final Long SETTINGS_ID = 1L;
+    private static final @NonNull Long SETTINGS_ID = 1L;
 
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
     public SystemSetting getSettings() {
         return systemSettingRepository.findById(SETTINGS_ID)
-                .orElseGet(() -> systemSettingRepository.save(buildDefaultSettings()));
+                .orElseGet(() -> systemSettingRepository.save(Objects.requireNonNull(buildDefaultSettings())));
     }
 
-    public SystemSetting updateSettings(SystemSettingRequest request) {
+    public SystemSetting updateSettings(@NonNull SystemSettingRequest request) {
         SystemSetting settings = systemSettingRepository.findById(SETTINGS_ID)
                 .orElseGet(this::buildDefaultSettings);
 
@@ -37,10 +39,10 @@ public class SystemSettingService {
         if (request.getDashboardRange() != null) {
             settings.setDashboardRange(request.getDashboardRange());
         }
-        return systemSettingRepository.save(settings);
+        return systemSettingRepository.save(Objects.requireNonNull(settings));
     }
 
-    private SystemSetting buildDefaultSettings() {
+    private @NonNull SystemSetting buildDefaultSettings() {
         SystemSetting settings = new SystemSetting();
         settings.setId(SETTINGS_ID);
         settings.setStoreName("JavaBooks");

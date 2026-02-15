@@ -4,6 +4,7 @@ import com.bookstore.entity.Book;
 import com.bookstore.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -18,31 +19,31 @@ public class BookService {
         return bookRepository.findAll();
     }
 
-    public List<Book> getAllBooks(Sort sort) {
+    public List<Book> getAllBooks(@NonNull Sort sort) {
         return bookRepository.findAll(sort);
     }
 
-    public Optional<Book> getBookById(Long id) {
+    public Optional<Book> getBookById(@NonNull Long id) {
         return bookRepository.findById(id);
     }
 
-    public List<Book> getBooksByCategory(Long categoryId) {
+    public List<Book> getBooksByCategory(@NonNull Long categoryId) {
         return bookRepository.findByCategoryId(categoryId);
     }
 
-    public List<Book> getBooksByCategory(Long categoryId, Sort sort) {
+    public List<Book> getBooksByCategory(@NonNull Long categoryId, @NonNull Sort sort) {
         return bookRepository.findByCategoryId(categoryId, sort);
     }
 
-    public List<Book> searchBooks(String title) {
+    public List<Book> searchBooks(@NonNull String title) {
         return bookRepository.findByTitleContainingIgnoreCase(title);
     }
 
-    public Book saveBook(Book book) {
+    public Book saveBook(@NonNull Book book) {
         return bookRepository.save(book);
     }
 
-    public void deleteBook(Long id) {
+    public void deleteBook(@NonNull Long id) {
         bookRepository.deleteById(id);
     }
 }

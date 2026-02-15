@@ -319,7 +319,7 @@ const Checkout: React.FC = () => {
                                 <button
                                     type="button"
                                     className="text-primary text-sm font-medium hover:underline mt-1 inline-block"
-                                    onClick={() => message.info('客服功能暂未开放，请稍后再试')}
+                                    onClick={() => navigate('/contact')}
                                 >
                                     联系客服支持
                                 </button>

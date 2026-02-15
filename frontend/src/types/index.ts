@@ -48,3 +48,20 @@ export interface Review {
     comment: string;
     createTime: string;
 }
+
+export interface Notification {
+    id: number;
+    type: string;
+    message: string;
+    read: boolean;
+    createTime: string;
+}
+
+export interface SystemSetting {
+    id: number;
+    storeName: string;
+    supportEmail: string;
+    supportPhone: string;
+    lowStockThreshold: number;
+    dashboardRange: string;
+}

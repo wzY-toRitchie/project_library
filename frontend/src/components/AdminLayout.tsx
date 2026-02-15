@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { message } from 'antd';
+import { message, Popover, List, Badge, Empty, Avatar } from 'antd';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+import type { Notification } from '../types';
 
 const AdminLayout: React.FC = () => {
     const { user, logout, isAuthenticated } = useAuth();
@@ -21,9 +23,70 @@ const AdminLayout: React.FC = () => {
         navigate('/login');
     };
 
-    const handleNotificationsClick = () => {
-        message.info('暂无新通知');
+    const [notifications, setNotifications] = React.useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = React.useState(0);
+
+    const fetchNotifications = React.useCallback(async () => {
+        try {
+            const response = await axios.get<Notification[]>('http://localhost:8080/api/notifications', { withCredentials: true });
+            // Sort by createTime desc
+            const sorted = response.data.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+            setNotifications(sorted);
+            setUnreadCount(sorted.filter(n => !n.read).length);
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (isAuthenticated) {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 10000);
+            return () => clearInterval(interval);
+        }
+    }, [isAuthenticated, fetchNotifications]);
+
+    const handleMarkAsRead = async (id: number) => {
+        try {
+            await axios.put(`http://localhost:8080/api/notifications/${id}/read`, {}, { withCredentials: true });
+            fetchNotifications();
+        } catch (error) {
+            console.error('Failed to mark notification as read', error);
+        }
     };
+
+    const notificationContent = (
+        <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
+            <List
+                itemLayout="horizontal"
+                dataSource={notifications}
+                locale={{ emptyText: <Empty description="暂无通知" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                renderItem={(item) => (
+                    <List.Item 
+                        className={`cursor-pointer hover:bg-gray-50 transition-colors ${!item.read ? 'bg-blue-50/50' : ''}`}
+                        onClick={() => !item.read && handleMarkAsRead(item.id)}
+                        extra={!item.read && <Badge status="processing" />}
+                    >
+                        <List.Item.Meta
+                            avatar={
+                                <Avatar 
+                                    style={{ backgroundColor: item.type === 'STOCK' ? '#ff4d4f' : item.type === 'ORDER' ? '#52c41a' : '#1890ff' }} 
+                                    icon={<span className="material-symbols-outlined text-white text-sm" style={{ fontSize: 16 }}>{item.type === 'STOCK' ? 'inventory_2' : item.type === 'ORDER' ? 'shopping_cart' : 'person'}</span>} 
+                                />
+                            }
+                            title={<span className="text-sm font-medium">{item.type === 'STOCK' ? '库存预警' : item.type === 'ORDER' ? '新订单' : '用户消息'}</span>}
+                            description={
+                                <div>
+                                    <div className="text-xs text-gray-600 mb-1">{item.message}</div>
+                                    <div className="text-xs text-gray-400">{new Date(item.createTime).toLocaleString()}</div>
+                                </div>
+                            }
+                        />
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
 
     const handleMobileMenuClick = () => {
         message.info('移动端菜单暂未开放');
@@ -65,6 +128,14 @@ const AdminLayout: React.FC = () => {
                         >
                             <span className="material-symbols-outlined">inventory_2</span>
                             <p className="text-sm font-medium">库存管理</p>
+                        </Link>
+
+                        <Link
+                            to="/admin/categories"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/categories')}`}
+                        >
+                            <span className="material-symbols-outlined">category</span>
+                            <p className="text-sm font-medium">分类管理</p>
                         </Link>
                         
                         <Link 
@@ -115,28 +186,27 @@ const AdminLayout: React.FC = () => {
                         <h2 className="text-lg font-bold leading-tight hidden sm:block">
                             {location.pathname === '/admin' ? 'Dashboard Overview' : 
                              location.pathname === '/admin/books' ? 'Book Inventory' : 
+                             location.pathname === '/admin/categories' ? 'Category Management' :
                              location.pathname === '/admin/orders' ? 'Order Management' :
                              location.pathname === '/admin/users' ? 'User Management' :
                              location.pathname === '/admin/settings' ? 'System Settings' : 'Admin Panel'}
                         </h2>
                     </div>
                     <div className="flex items-center gap-6">
-                        <div className="hidden md:flex relative w-64 h-10">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#637588]">
-                                <span className="material-symbols-outlined text-[20px]">search</span>
-                            </div>
-                            <input 
-                                className="block w-full pl-10 pr-3 py-2 border-none rounded-lg bg-[#f0f2f4] dark:bg-[#2a3b4d] dark:text-white text-sm placeholder-[#637588] focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-[#1a2632] transition-colors" 
-                                placeholder="搜索功能开发中" 
-                                type="text"
-                                disabled
-                            />
-                        </div>
                         <div className="flex items-center gap-4">
-                            <button className="relative p-2 text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d] rounded-full transition-colors" onClick={handleNotificationsClick}>
-                                <span className="material-symbols-outlined">notifications</span>
-                                <span className="absolute top-2 right-2 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#1a2632]"></span>
-                            </button>
+                            <Popover 
+                                content={notificationContent} 
+                                title="通知中心" 
+                                trigger="click" 
+                                placement="bottomRight"
+                            >
+                                <button className="relative p-2 text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d] rounded-full transition-colors">
+                                    <span className="material-symbols-outlined">notifications</span>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-2 right-2 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#1a2632]"></span>
+                                    )}
+                                </button>
+                            </Popover>
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
                                     {user?.username?.charAt(0).toUpperCase() || 'A'}

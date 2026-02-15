@@ -5,6 +5,7 @@ import com.bookstore.entity.Review;
 import com.bookstore.entity.User;
 import com.bookstore.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,7 +43,12 @@ public class ReviewController {
     }
 
     @GetMapping("/book/{bookId}")
-    public List<Review> getReviewsByBook(@PathVariable Long bookId) {
+    public List<Review> getReviewsByBook(@PathVariable @NonNull Long bookId) {
         return reviewService.getReviewsByBookId(bookId);
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<Review> getReviewsByUser(@PathVariable @NonNull Long userId) {
+        return reviewService.getReviewsByUserId(userId);
     }
 }
