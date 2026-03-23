@@ -1,15 +1,17 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.Book;
+import com.bookstore.payload.response.PageResponse;
 import com.bookstore.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:5173", maxAge = 3600, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/books")
 public class BookController {
@@ -18,11 +20,14 @@ public class BookController {
     private BookService bookService;
 
     @GetMapping
-    public List<Book> getAllBooks(
+    public PageResponse<Book> getAllBooks(
             @RequestParam(required = false, defaultValue = "createTime") @NonNull String sortBy,
-            @RequestParam(required = false, defaultValue = "desc") @NonNull String direction) {
+            @RequestParam(required = false, defaultValue = "desc") @NonNull String direction,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "12") int size) {
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-        return bookService.getAllBooks(sort);
+        Page<Book> bookPage = bookService.getAllBooks(PageRequest.of(page, size, sort));
+        return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
     }
 
     @GetMapping("/{id}")
@@ -33,17 +38,61 @@ public class BookController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<Book> getBooksByCategory(
+    public PageResponse<Book> getBooksByCategory(
             @PathVariable @NonNull Long categoryId,
             @RequestParam(required = false, defaultValue = "createTime") @NonNull String sortBy,
-            @RequestParam(required = false, defaultValue = "desc") @NonNull String direction) {
+            @RequestParam(required = false, defaultValue = "desc") @NonNull String direction,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "12") int size) {
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-        return bookService.getBooksByCategory(categoryId, sort);
+        Page<Book> bookPage = bookService.getBooksByCategory(categoryId, PageRequest.of(page, size, sort));
+        return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
     }
 
     @GetMapping("/search")
-    public List<Book> searchBooks(@RequestParam @NonNull String title) {
-        return bookService.searchBooks(title);
+    public PageResponse<Book> searchBooks(
+            @RequestParam @NonNull String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false, defaultValue = "relevance") String sortBy,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "12") int size) {
+        
+        Sort sort;
+        switch (sortBy) {
+            case "price_asc":
+                sort = Sort.by(Sort.Direction.ASC, "price");
+                break;
+            case "price_desc":
+                sort = Sort.by(Sort.Direction.DESC, "price");
+                break;
+            case "rating":
+                sort = Sort.by(Sort.Direction.DESC, "rating");
+                break;
+            case "newest":
+                sort = Sort.by(Sort.Direction.DESC, "createTime");
+                break;
+            default: // relevance - 按创建时间排序
+                sort = Sort.by(Sort.Direction.DESC, "createTime");
+        }
+        
+        Page<Book> bookPage;
+        if (categoryId != null) {
+            bookPage = bookService.searchByKeywordAndCategory(keyword, categoryId, PageRequest.of(page, size, sort));
+        } else {
+            bookPage = bookService.searchByKeyword(keyword, PageRequest.of(page, size, sort));
+        }
+        
+        return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
+    }
+
+    @GetMapping("/search/suggestions")
+    public List<String> getSearchSuggestions(@RequestParam @NonNull String keyword) {
+        return bookService.getSearchSuggestions(keyword);
+    }
+
+    @GetMapping("/search/hot")
+    public List<String> getHotSearches() {
+        return bookService.getHotSearches();
     }
 
     @PostMapping

@@ -2,15 +2,18 @@ package com.bookstore.service;
 
 import com.bookstore.entity.User;
 import com.bookstore.entity.Address;
+import com.bookstore.entity.Order;
 import com.bookstore.entity.Notification;
 import com.bookstore.repository.AddressRepository;
 import com.bookstore.repository.UserRepository;
+import com.bookstore.repository.OrderRepository;
 import com.bookstore.payload.response.UserSummaryResponse;
 import com.bookstore.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.Objects;
@@ -23,6 +26,9 @@ public class UserService {
 
     @Autowired
     private AddressRepository addressRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Autowired
     private NotificationRepository notificationRepository;
@@ -55,16 +61,32 @@ public class UserService {
 
     public List<UserSummaryResponse> getAllUserSummaries() {
         List<User> users = userRepository.findAll();
+        List<Long> userIds = users.stream().map(User::getId).toList();
+
+        // 批量获取地址数量
+        List<Object[]> addressCounts = addressRepository.countByUserIdGrouped();
+        java.util.Map<Long, Long> countMap = new java.util.HashMap<>();
+        for (Object[] row : addressCounts) {
+            countMap.put((Long) row[0], (Long) row[1]);
+        }
+
+        // 批量获取默认地址
+        List<Address> defaultAddresses = addressRepository.findDefaultAddressesByUserIds(userIds);
+        java.util.Map<Long, String> addressMap = new java.util.HashMap<>();
+        for (Address addr : defaultAddresses) {
+            addressMap.put(addr.getUser().getId(), addr.getAddress());
+        }
+
         return users.stream().map(user -> new UserSummaryResponse(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getFullName(),
                 user.getPhoneNumber(),
-                resolveDefaultAddress(user.getId()),
+                addressMap.get(user.getId()),
                 user.getRole(),
                 user.getCreateTime(),
-                addressRepository.countByUserId(user.getId()))).toList();
+                countMap.getOrDefault(user.getId(), 0L))).toList();
     }
 
     public Optional<UserSummaryResponse> getUserSummary(@NonNull Long userId) {
@@ -88,7 +110,13 @@ public class UserService {
         return userRepository.save(Objects.requireNonNull(user));
     }
 
+    @Transactional
     public void deleteUser(@NonNull Long userId) {
+        // 先删除关联的地址
+        addressRepository.deleteAll(addressRepository.findByUserId(userId));
+        // 先删除关联的订单（如果需要保留订单历史，可以改为软删除）
+        orderRepository.deleteAll(orderRepository.findByUserId(userId));
+        // 最后删除用户
         userRepository.deleteById(userId);
     }
 

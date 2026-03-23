@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Typography, Spin, Descriptions } from 'antd';
-import axios from 'axios';
+import api from '../api';
 import type { SystemSetting } from '../types';
 
 const { Title, Paragraph } = Typography;
@@ -12,7 +12,7 @@ const ContactSupport: React.FC = () => {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await axios.get('http://localhost:8080/api/settings', { withCredentials: true });
+                const response = await api.get('/settings');
                 setSettings(response.data);
             } catch (error) {
                 console.error('Failed to fetch settings', error);

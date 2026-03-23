@@ -5,6 +5,7 @@ import com.bookstore.payload.request.UpdatePasswordRequest;
 import com.bookstore.payload.request.UpdateProfileRequest;
 import com.bookstore.payload.response.MessageResponse;
 import com.bookstore.payload.response.UserSummaryResponse;
+import com.bookstore.security.SecurityUtils;
 import com.bookstore.security.services.UserDetailsImpl;
 import com.bookstore.service.UserService;
 import jakarta.validation.Valid;
@@ -15,36 +16,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:5173", maxAge = 3600, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
     @Autowired
     private UserService userService;
-
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody @NonNull User user) {
-        try {
-            return ResponseEntity.ok(userService.register(user));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @NonNull Map<String, String> credentials) {
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-        if (username == null || password == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Username and password are required"));
-        }
-        return userService.login(username, password)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(401).build());
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserSummaryResponse> getUserById(@PathVariable @NonNull Long id) {
@@ -60,6 +38,9 @@ public class UserController {
 
     @PatchMapping("/{id}/role")
     public ResponseEntity<User> updateUserRole(@PathVariable @NonNull Long id, @RequestParam @NonNull String role) {
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).build();
+        }
         try {
             return ResponseEntity.ok(userService.updateRole(id, role));
         } catch (RuntimeException e) {
@@ -69,6 +50,9 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable @NonNull Long id) {
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(new MessageResponse("只有管理员可以删除用户"));
+        }
         try {
             userService.deleteUser(id);
             return ResponseEntity.ok().build();
@@ -123,6 +107,9 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUserByAdmin(@PathVariable @NonNull Long id,
             @Valid @RequestBody @NonNull UpdateProfileRequest request) {
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(new MessageResponse("只有管理员可以编辑用户资料"));
+        }
         try {
             User updatedUser = userService.updateUserByAdmin(id, request);
             UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);

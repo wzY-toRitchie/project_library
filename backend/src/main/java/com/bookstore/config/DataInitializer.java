@@ -6,6 +6,7 @@ import com.bookstore.entity.Category;
 import com.bookstore.entity.Order;
 import com.bookstore.entity.OrderItem;
 import com.bookstore.entity.User;
+import com.bookstore.enums.OrderStatus;
 import com.bookstore.repository.AddressRepository;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.CategoryRepository;
@@ -44,7 +45,7 @@ public class DataInitializer {
                         if (!userRepository.existsByUsername("admin")) {
                                 admin = new User();
                                 admin.setUsername("admin");
-                                admin.setPassword(passwordEncoder.encode("admin123"));
+                                admin.setPassword(passwordEncoder.encode("Admin@123"));
                                 admin.setEmail("admin@example.com");
                                 admin.setRole("ADMIN");
                         }
@@ -52,7 +53,7 @@ public class DataInitializer {
                         if (!userRepository.existsByUsername("user")) {
                                 user = new User();
                                 user.setUsername("user");
-                                user.setPassword(passwordEncoder.encode("user123"));
+                                user.setPassword(passwordEncoder.encode("User@1234"));
                                 user.setEmail("user@example.com");
                                 user.setRole("USER");
                         }
@@ -439,40 +440,40 @@ public class DataInitializer {
 
                                 List<Order> orders = new ArrayList<>();
 
-                                Order o1 = buildOrder(baseUser, "PENDING", LocalDateTime.now().minusHours(6),
+                                Order o1 = buildOrder(baseUser, OrderStatus.PENDING, LocalDateTime.now().minusHours(6),
                                                 Arrays.asList(buildItem(javaCore, 1), buildItem(python, 2)));
                                 addOrderIfValid(orders, o1);
 
-                                Order o2 = buildOrder(alice, "PAID", LocalDateTime.now().minusDays(1),
+                                Order o2 = buildOrder(alice, OrderStatus.PAID, LocalDateTime.now().minusDays(1),
                                                 Arrays.asList(buildItem(threeBody, 1), buildItem(alive, 2)));
                                 addOrderIfValid(orders, o2);
 
-                                Order o3 = buildOrder(bob, "SHIPPED", LocalDateTime.now().minusDays(3),
+                                Order o3 = buildOrder(bob, OrderStatus.SHIPPED, LocalDateTime.now().minusDays(3),
                                                 Arrays.asList(buildItem(csApp, 1), buildItem(cleanCode, 1)));
                                 addOrderIfValid(orders, o3);
 
-                                Order o4 = buildOrder(charlie, "COMPLETED", LocalDateTime.now().minusDays(5),
+                                Order o4 = buildOrder(charlie, OrderStatus.COMPLETED, LocalDateTime.now().minusDays(5),
                                                 Arrays.asList(buildItem(humanHistory, 1), buildItem(whiteNight, 1)));
                                 addOrderIfValid(orders, o4);
 
-                                Order o5 = buildOrder(diana, "CANCELLED", LocalDateTime.now().minusDays(2),
+                                Order o5 = buildOrder(diana, OrderStatus.CANCELLED, LocalDateTime.now().minusDays(2),
                                                 Arrays.asList(buildItem(galaxyEmpire, 1)));
                                 addOrderIfValid(orders, o5);
 
-                                Order o6 = buildOrder(edward, "PAID", LocalDateTime.now().minusDays(7),
+                                Order o6 = buildOrder(edward, OrderStatus.PAID, LocalDateTime.now().minusDays(7),
                                                 Arrays.asList(buildItem(designPatterns, 1), buildItem(cleanCode, 1)));
                                 addOrderIfValid(orders, o6);
 
-                                Order o7 = buildOrder(frank, "SHIPPED", LocalDateTime.now().minusDays(8),
+                                Order o7 = buildOrder(frank, OrderStatus.SHIPPED, LocalDateTime.now().minusDays(8),
                                                 Arrays.asList(buildItem(cosmos, 1), buildItem(wander, 1)));
                                 addOrderIfValid(orders, o7);
 
-                                Order o8 = buildOrder(grace, "COMPLETED", LocalDateTime.now().minusDays(10),
+                                Order o8 = buildOrder(grace, OrderStatus.COMPLETED, LocalDateTime.now().minusDays(10),
                                                 Arrays.asList(buildItem(javaCore, 1), buildItem(csApp, 1),
                                                                 buildItem(threeBody, 1)));
                                 addOrderIfValid(orders, o8);
 
-                                Order o9 = buildOrder(helen, "PENDING", LocalDateTime.now().minusHours(3),
+                                Order o9 = buildOrder(helen, OrderStatus.PENDING, LocalDateTime.now().minusHours(3),
                                                 Arrays.asList(buildItem(whiteNight, 1), buildItem(alive, 1)));
                                 addOrderIfValid(orders, o9);
 
@@ -496,7 +497,7 @@ public class DataInitializer {
                 }
                 User user = new User();
                 user.setUsername(username);
-                user.setPassword(passwordEncoder.encode("user123"));
+                user.setPassword(passwordEncoder.encode("User@1234"));
                 user.setEmail(email);
                 user.setFullName(fullName);
                 user.setPhoneNumber(phoneNumber);
@@ -572,7 +573,7 @@ public class DataInitializer {
                 return item;
         }
 
-        private Order buildOrder(User user, String status, LocalDateTime createTime, List<OrderItem> items) {
+        private Order buildOrder(User user, OrderStatus status, LocalDateTime createTime, List<OrderItem> items) {
                 if (user == null) {
                         return null;
                 }

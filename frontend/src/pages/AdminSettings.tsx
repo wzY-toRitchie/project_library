@@ -77,6 +77,8 @@ const AdminSettings: React.FC = () => {
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">店铺名称</label>
                         <input
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            name="storeName"
+                            data-testid="store-name-input"
                             value={settings.storeName}
                             onChange={(e) => setSettings(prev => ({ ...prev, storeName: e.target.value }))}
                             disabled={loading}
@@ -86,6 +88,8 @@ const AdminSettings: React.FC = () => {
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">客服邮箱</label>
                         <input
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            name="supportEmail"
+                            data-testid="support-email-input"
                             value={settings.supportEmail}
                             onChange={(e) => setSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
                             disabled={loading}
@@ -95,6 +99,8 @@ const AdminSettings: React.FC = () => {
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">客服电话</label>
                         <input
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            name="supportPhone"
+                            data-testid="support-phone-input"
                             value={settings.supportPhone}
                             onChange={(e) => setSettings(prev => ({ ...prev, supportPhone: e.target.value }))}
                             disabled={loading}
@@ -105,6 +111,8 @@ const AdminSettings: React.FC = () => {
                         <input
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                             type="number"
+                            name="lowStockThreshold"
+                            data-testid="low-stock-threshold-input"
                             min={1}
                             value={settings.lowStockThreshold}
                             onChange={(e) => setSettings(prev => ({ ...prev, lowStockThreshold: Number(e.target.value) || 1 }))}

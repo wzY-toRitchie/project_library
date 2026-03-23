@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Book } from '../types';
+import api from '../api';
+import { useAuth } from './AuthContext';
+import { message } from 'antd';
 
 interface CartItem extends Book {
     quantity: number;
@@ -13,21 +16,50 @@ interface CartContextType {
     clearCart: () => void;
     totalPrice: number;
     cartCount: number;
+    syncCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated } = useAuth();
     const [cartItems, setCartItems] = useState<CartItem[]>(() => {
         const savedCart = localStorage.getItem('cart');
         return savedCart ? JSON.parse(savedCart) : [];
     });
 
+    // 保存到 localStorage
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (book: Book) => {
+    // 从后端同步购物车
+    const syncCart = useCallback(async () => {
+        if (!isAuthenticated) return;
+        try {
+            const response = await api.get('/cart');
+            const backendItems = response.data.map((item: any) => ({
+                ...item.book,
+                quantity: item.quantity
+            }));
+            setCartItems(backendItems);
+        } catch (error) {
+            console.error('Failed to sync cart:', error);
+        }
+    }, [isAuthenticated]);
+
+    // 登录时从后端加载购物车
+    useEffect(() => {
+        if (isAuthenticated) {
+            syncCart();
+        }
+    }, [isAuthenticated, syncCart]);
+
+    const addToCart = async (book: Book) => {
+        // 保存原始状态用于回滚
+        const previousItems = [...cartItems];
+        
+        // 乐观更新本地状态
         setCartItems(prev => {
             const existingItem = prev.find(item => item.id === book.id);
             if (existingItem) {
@@ -37,29 +69,88 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             return [...prev, { ...book, quantity: 1 }];
         });
+
+        // 同步到后端
+        if (isAuthenticated) {
+            try {
+                await api.post(`/cart?bookId=${book.id}&quantity=1`);
+                message.success('已添加到购物车');
+            } catch (error) {
+                console.error('Failed to add to cart:', error);
+                // 回滚本地状态
+                setCartItems(previousItems);
+                message.error('添加购物车失败，请重试');
+            }
+        } else {
+            message.success('已添加到购物车');
+        }
     };
 
-    const removeFromCart = (bookId: number) => {
+    const removeFromCart = async (bookId: number) => {
+        const previousItems = [...cartItems];
+        
+        // 乐观更新
         setCartItems(prev => prev.filter(item => item.id !== bookId));
+
+        if (isAuthenticated) {
+            try {
+                await api.delete(`/cart/${bookId}`);
+                message.success('已从购物车移除');
+            } catch (error) {
+                console.error('Failed to remove from cart:', error);
+                setCartItems(previousItems);
+                message.error('移除失败，请重试');
+            }
+        }
     };
 
-    const updateQuantity = (bookId: number, quantity: number) => {
+    const updateQuantity = async (bookId: number, quantity: number) => {
         if (quantity <= 0) {
             removeFromCart(bookId);
             return;
         }
+
+        const previousItems = [...cartItems];
+        
+        // 乐观更新
         setCartItems(prev =>
             prev.map(item => (item.id === bookId ? { ...item, quantity } : item))
         );
+
+        if (isAuthenticated) {
+            try {
+                await api.put(`/cart/${bookId}?quantity=${quantity}`);
+            } catch (error) {
+                console.error('Failed to update quantity:', error);
+                setCartItems(previousItems);
+                message.error('更新数量失败，请重试');
+            }
+        }
     };
 
-    const clearCart = () => setCartItems([]);
+    const clearCart = async () => {
+        const previousItems = [...cartItems];
+        
+        // 乐观更新
+        setCartItems([]);
+
+        if (isAuthenticated) {
+            try {
+                await api.delete('/cart');
+                message.success('购物车已清空');
+            } catch (error) {
+                console.error('Failed to clear cart:', error);
+                setCartItems(previousItems);
+                message.error('清空购物车失败，请重试');
+            }
+        }
+    };
 
     const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, totalPrice, cartCount }}>
+        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, totalPrice, cartCount, syncCart }}>
             {children}
         </CartContext.Provider>
     );

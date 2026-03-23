@@ -4,6 +4,8 @@ import com.bookstore.entity.SystemSetting;
 import com.bookstore.payload.request.SystemSettingRequest;
 import com.bookstore.repository.SystemSettingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import java.util.Objects;
@@ -15,11 +17,13 @@ public class SystemSettingService {
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
+    @Cacheable(value = "settings")
     public SystemSetting getSettings() {
         return systemSettingRepository.findById(SETTINGS_ID)
                 .orElseGet(() -> systemSettingRepository.save(Objects.requireNonNull(buildDefaultSettings())));
     }
 
+    @CacheEvict(value = "settings", allEntries = true)
     public SystemSetting updateSettings(@NonNull SystemSettingRequest request) {
         SystemSetting settings = systemSettingRepository.findById(SETTINGS_ID)
                 .orElseGet(this::buildDefaultSettings);

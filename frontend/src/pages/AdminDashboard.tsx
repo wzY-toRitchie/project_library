@@ -1,263 +1,346 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import api from '../api';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
-
-interface DashboardOrderItem {
-    quantity: number;
-    book?: {
-        id: number;
-        title?: string;
-        author?: string;
-    };
-}
-
-interface DashboardOrder {
-    id: number;
-    totalPrice: number | string;
-    status: string;
-    createTime?: string;
-    items?: DashboardOrderItem[];
-}
-
-interface DashboardUser {
-    id: number;
-    username: string;
-    email: string;
-    createTime?: string;
-}
-
-interface DashboardBook {
-    id: number;
-    title: string;
-    author: string;
-    stock: number;
-}
-
-interface AdminSettingsState {
-    storeName: string;
-    supportEmail: string;
-    supportPhone: string;
-    lowStockThreshold: number;
-    dashboardRange: '6m' | '12m';
-}
-
-const defaultSettings: AdminSettingsState = {
-    storeName: 'JavaBooks',
-    supportEmail: 'support@javabooks.com',
-    supportPhone: '400-123-4567',
-    lowStockThreshold: 10,
-    dashboardRange: '6m'
-};
+import { 
+    DollarSign, 
+    ShoppingCart, 
+    Users, 
+    Package,
+    TrendingUp,
+    Calendar,
+    Bell,
+    Download,
+    Truck,
+    Clock,
+    AlertTriangle
+} from 'lucide-react';
+import { 
+    getDashboardSummary, 
+    getSalesTrend, 
+    getOrderStatusDistribution,
+    getTopProducts,
+    getCategorySales,
+    getUserGrowth,
+    getTodoItems
+} from '../api/dashboard';
+import { exportOrders, exportUsers, exportBooks } from '../api/export';
+import type { 
+    DashboardSummary, 
+    SalesTrend, 
+    OrderStatus, 
+    TopProducts,
+    CategorySales,
+    UserGrowth,
+    TodoItems
+} from '../api/dashboard';
+import SalesTrendChart from '../components/charts/SalesTrendChart';
+import OrderStatusChart from '../components/charts/OrderStatusChart';
+import TopProductsChart from '../components/charts/TopProductsChart';
+import CategorySalesChart from '../components/charts/CategorySalesChart';
+import UserGrowthChart from '../components/charts/UserGrowthChart';
 
 const AdminDashboard: React.FC = () => {
-    const [orders, setOrders] = useState<DashboardOrder[]>([]);
-    const [users, setUsers] = useState<DashboardUser[]>([]);
-    const [books, setBooks] = useState<DashboardBook[]>([]);
-    const [settings, setSettings] = useState<AdminSettingsState>(defaultSettings);
-    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [summary, setSummary] = useState<DashboardSummary | null>(null);
+    const [salesTrend, setSalesTrend] = useState<SalesTrend | null>(null);
+    const [orderStatus, setOrderStatus] = useState<OrderStatus | null>(null);
+    const [topProducts, setTopProducts] = useState<TopProducts | null>(null);
+    const [categorySales, setCategorySales] = useState<CategorySales | null>(null);
+    const [userGrowth, setUserGrowth] = useState<UserGrowth | null>(null);
+    const [todos, setTodos] = useState<TodoItems | null>(null);
+    const [trendDays, setTrendDays] = useState(30);
 
     useEffect(() => {
-        const fetchDashboard = async () => {
+        const fetchDashboardData = async () => {
             setLoading(true);
             try {
-                const [ordersRes, usersRes, booksRes, settingsRes] = await Promise.all([
-                    api.get('/orders'),
-                    api.get('/users'),
-                    api.get('/books'),
-                    api.get('/settings')
+                const [summaryData, salesData, orderData, productsData, categoryData, userData, todosData] = await Promise.all([
+                    getDashboardSummary(),
+                    getSalesTrend(trendDays),
+                    getOrderStatusDistribution(),
+                    getTopProducts(10),
+                    getCategorySales(),
+                    getUserGrowth(trendDays),
+                    getTodoItems()
                 ]);
-                setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
-                setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
-                setBooks(Array.isArray(booksRes.data) ? booksRes.data : []);
-                setSettings({ ...defaultSettings, ...settingsRes.data });
+                
+                setSummary(summaryData);
+                setSalesTrend(salesData);
+                setOrderStatus(orderData);
+                setTopProducts(productsData);
+                setCategorySales(categoryData);
+                setUserGrowth(userData);
+                setTodos(todosData);
+                setUserGrowth(userData);
             } catch (error) {
-                console.error('Failed to load dashboard data:', error);
+                console.error('Failed to fetch dashboard data:', error);
                 message.error('仪表盘数据加载失败');
-                setSettings(defaultSettings);
             } finally {
                 setLoading(false);
             }
         };
-        fetchDashboard();
-    }, []);
 
-    const revenueOrders = useMemo(() => orders.filter(order => order.status !== 'CANCELLED'), [orders]);
-    const totalRevenue = useMemo(() => revenueOrders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0), [revenueOrders]);
+        fetchDashboardData();
+    }, [trendDays]);
 
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const newUsersThisMonth = useMemo(() => users.filter(user => {
-        if (!user.createTime) return false;
-        const date = new Date(user.createTime);
-        return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
-    }).length, [users, currentMonth, currentYear]);
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('zh-CN', {
+            style: 'currency',
+            currency: 'CNY',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    };
 
-    const lowStockThreshold = settings.lowStockThreshold || 10;
-    const stockAlerts = useMemo(() => books.filter(book => book.stock <= lowStockThreshold).length, [books, lowStockThreshold]);
-
-    const rangeMonths = settings.dashboardRange === '12m' ? 12 : 6;
-    const monthlySales = useMemo(() => {
-        const data = Array.from({ length: rangeMonths }, (_, index) => {
-            const date = new Date(currentYear, currentMonth - (rangeMonths - 1 - index), 1);
-            return { month: date.getMonth(), year: date.getFullYear(), total: 0 };
-        });
-        revenueOrders.forEach(order => {
-            if (!order.createTime) return;
-            const date = new Date(order.createTime);
-            data.forEach(bucket => {
-                if (bucket.month === date.getMonth() && bucket.year === date.getFullYear()) {
-                    bucket.total += Number(order.totalPrice || 0);
-                }
-            });
-        });
-        return data;
-    }, [revenueOrders, rangeMonths, currentMonth, currentYear]);
-
-    const currentMonthRevenue = monthlySales[monthlySales.length - 1]?.total || 0;
-    const previousMonthRevenue = monthlySales[monthlySales.length - 2]?.total || 0;
-    const revenueChange = previousMonthRevenue === 0 ? (currentMonthRevenue > 0 ? 100 : 0) : ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
-
-    const topBooks = useMemo(() => {
-        const stats = new Map<string, { key: string; title: string; author?: string; sold: number }>();
-        orders.forEach(order => {
-            order.items?.forEach(item => {
-                const title = item.book?.title || '未知图书';
-                const key = `${item.book?.id || title}`;
-                const current = stats.get(key) || { key, title, author: item.book?.author, sold: 0 };
-                current.sold += item.quantity;
-                stats.set(key, current);
-            });
-        });
-        return Array.from(stats.values()).sort((a, b) => b.sold - a.sold).slice(0, 5);
-    }, [orders]);
-
-    const maxMonthly = Math.max(...monthlySales.map(item => item.total), 1);
+    if (loading) {
+        return (
+            <div className="flex-1 flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 h-full">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 h-full bg-slate-50 dark:bg-slate-900">
             <div className="max-w-7xl mx-auto flex flex-col gap-8">
-                {/* Stats Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <TrendingUp className="text-primary" />
+                            数据可视化大屏
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            实时监控店铺运营数据
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm">
+                        <button
+                            onClick={() => setTrendDays(7)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                trendDays === 7 
+                                    ? 'bg-primary text-white' 
+                                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            近7天
+                        </button>
+                        <button
+                            onClick={() => setTrendDays(30)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                trendDays === 30 
+                                    ? 'bg-primary text-white' 
+                                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            近30天
+                        </button>
+                    </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Total Sales */}
-                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36">
-                        <div className="flex justify-between items-start">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">总收入</p>
-                                <h3 className="text-3xl font-bold mt-2">¥{totalRevenue.toFixed(2)}</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">总销售额</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                                    {formatCurrency(summary?.totalSales || 0)}
+                                </p>
+                                <p className="text-xs text-green-500 mt-2">
+                                    今日: {formatCurrency(summary?.todaySales || 0)}
+                                </p>
                             </div>
-                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400">
-                                <span className="material-symbols-outlined">payments</span>
+                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                                <DollarSign className="w-6 h-6 text-green-600" />
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-auto">
-                            <span className="material-symbols-outlined text-green-600 text-sm">trending_up</span>
-                            <span className="text-sm font-medium text-green-600">{revenueChange >= 0 ? `+${revenueChange.toFixed(1)}%` : `${revenueChange.toFixed(1)}%`}</span>
-                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">较上月</span>
                         </div>
                     </div>
-                    
+
+                    {/* Total Orders */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">订单总数</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                                    {summary?.totalOrders || 0}
+                                </p>
+                                <p className="text-xs text-blue-500 mt-2">
+                                    今日: {summary?.todayOrders || 0} 单
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                                <ShoppingCart className="w-6 h-6 text-blue-600" />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Total Users */}
-                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36">
-                        <div className="flex justify-between items-start">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">用户总数</p>
-                                <h3 className="text-3xl font-bold mt-2">{users.length}</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">用户总数</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                                    {summary?.totalUsers || 0}
+                                </p>
                             </div>
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
-                                <span className="material-symbols-outlined">group_add</span>
+                            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                                <Users className="w-6 h-6 text-purple-600" />
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-auto">
-                            <span className="material-symbols-outlined text-green-600 text-sm">trending_up</span>
-                            <span className="text-sm font-medium text-green-600">+{newUsersThisMonth}</span>
-                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">本月新增</span>
                         </div>
                     </div>
-                    
-                    {/* Stock Alerts */}
-                    <div className="bg-white dark:bg-[#1a2632] p-6 rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col justify-between h-36 relative overflow-hidden group cursor-pointer hover:border-red-200 transition-colors">
-                        <div className="absolute right-0 top-0 h-full w-1 bg-red-500"></div>
-                        <div className="flex justify-between items-start">
+
+                    {/* Total Books */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-[#637588] dark:text-[#9ca3af]">库存预警</p>
-                                <h3 className="text-3xl font-bold mt-2 text-[#111418] dark:text-white">{stockAlerts}</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">商品总数</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                                    {summary?.totalBooks || 0}
+                                </p>
                             </div>
-                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
-                                <span className="material-symbols-outlined">warning</span>
+                            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                                <Package className="w-6 h-6 text-orange-600" />
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-auto">
-                            <span className="text-sm font-medium text-red-600">库存不足</span>
-                            <span className="text-sm text-[#637588] dark:text-[#9ca3af]">- {lowStockThreshold} 以下</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Charts & Lists Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-[500px]">
-                    {/* Chart Section */}
-                    <div className="lg:col-span-2 bg-white dark:bg-[#1a2632] rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col">
-                        <div className="p-6 border-b border-[#e5e7eb] dark:border-[#2a3b4d] flex justify-between items-center">
-                            <h3 className="font-bold text-lg">月度销售趋势</h3>
-                            <div className="flex gap-2">
-                                <button className={`text-xs font-medium px-3 py-1 rounded-full ${settings.dashboardRange === '6m' ? 'bg-primary/10 text-primary' : 'text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d]'}`}>近6个月</button>
-                                <button className={`text-xs font-medium px-3 py-1 rounded-full ${settings.dashboardRange === '12m' ? 'bg-primary/10 text-primary' : 'text-[#637588] hover:bg-[#f0f2f4] dark:hover:bg-[#2a3b4d]'}`}>近1年</button>
-                            </div>
+                {/* Todo Items & Quick Actions */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Todo Items */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <Bell className="w-5 h-5 text-primary" />
+                                待办事项
+                            </h3>
                         </div>
-                        <div className="flex-1 p-6 flex flex-col justify-end">
-                            <div className="flex h-full items-end gap-4 md:gap-8 justify-between px-2">
-                                {monthlySales.map((item, index) => {
-                                    const height = Math.max(4, Math.round((item.total / maxMonthly) * 100));
-                                    return (
-                                        <div key={`${item.year}-${item.month}-${index}`} className="flex flex-col items-center gap-2 group w-full">
-                                            <div className="relative w-full bg-[#f0f2f4] dark:bg-[#2a3b4d] rounded-t-lg h-64 overflow-hidden">
-                                                <div className="absolute bottom-0 w-full bg-primary/80 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style={{ height: `${height}%` }}></div>
-                                            </div>
-                                            <span className="text-xs font-medium text-[#637588]">{item.month + 1}月</span>
-                                        </div>
-                                    );
-                                })}
+                        <div className="space-y-3">
+                            <div 
+                                onClick={() => navigate('/admin/orders')}
+                                className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Clock className="w-5 h-5 text-yellow-600" />
+                                    <span className="text-sm text-slate-700 dark:text-slate-300">待支付订单</span>
+                                </div>
+                                <span className="text-lg font-bold text-yellow-600">{todos?.pendingOrders || 0}</span>
+                            </div>
+                            <div 
+                                onClick={() => navigate('/admin/orders')}
+                                className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Truck className="w-5 h-5 text-blue-600" />
+                                    <span className="text-sm text-slate-700 dark:text-slate-300">待发货订单</span>
+                                </div>
+                                <span className="text-lg font-bold text-blue-600">{todos?.paidOrders || 0}</span>
+                            </div>
+                            <div 
+                                onClick={() => navigate('/admin/books')}
+                                className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                                    <span className="text-sm text-slate-700 dark:text-slate-300">库存预警商品</span>
+                                </div>
+                                <span className="text-lg font-bold text-red-600">{todos?.lowStockBooks || 0}</span>
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Top Ranking Section */}
-                    <div className="lg:col-span-1 bg-white dark:bg-[#1a2632] rounded-xl border border-[#e5e7eb] dark:border-[#2a3b4d] shadow-sm flex flex-col overflow-hidden">
-                        <div className="p-6 border-b border-[#e5e7eb] dark:border-[#2a3b4d]">
-                            <h3 className="font-bold text-lg">热销图书榜</h3>
-                        </div>
-                        <div className="flex-1 overflow-y-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-[#f9fafb] dark:bg-[#2a3b4d] text-[#637588] font-medium sticky top-0">
-                                    <tr>
-                                        <th className="px-4 py-3 w-12 text-center">#</th>
-                                        <th className="px-4 py-3">书名</th>
-                                        <th className="px-4 py-3 text-right">销量</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#e5e7eb] dark:divide-[#2a3b4d]">
-                                    {topBooks.map((book, index) => (
-                                        <tr key={book.key} className="group hover:bg-gray-50 dark:hover:bg-[#23303e] transition-colors">
-                                            <td className="px-4 py-3 text-center font-bold text-[#111418] dark:text-white">{index + 1}</td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-[#111418] dark:text-white line-clamp-1">{book.title}</span>
-                                                    <span className="text-xs text-[#637588]">{book.author || '-'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-medium text-[#111418] dark:text-white">{book.sold.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                    {!loading && topBooks.length === 0 && (
-                                        <tr>
-                                            <td colSpan={3} className="px-4 py-6 text-center text-sm text-[#637588]">暂无数据</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+
+                    {/* Quick Actions */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                            <TrendingUp className="w-5 h-5 text-primary" />
+                            快捷操作
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => navigate('/admin/orders')}
+                                className="flex items-center gap-2 p-4 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                            >
+                                <Truck className="w-5 h-5 text-primary" />
+                                <span className="text-sm font-medium text-primary">批量发货</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await exportOrders();
+                                        message.success('订单导出成功');
+                                    } catch {
+                                        message.error('导出失败');
+                                    }
+                                }}
+                                className="flex items-center gap-2 p-4 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors"
+                            >
+                                <Download className="w-5 h-5 text-green-600" />
+                                <span className="text-sm font-medium text-green-600">导出订单</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await exportUsers();
+                                        message.success('用户导出成功');
+                                    } catch {
+                                        message.error('导出失败');
+                                    }
+                                }}
+                                className="flex items-center gap-2 p-4 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors"
+                            >
+                                <Download className="w-5 h-5 text-purple-600" />
+                                <span className="text-sm font-medium text-purple-600">导出用户</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await exportBooks();
+                                        message.success('商品导出成功');
+                                    } catch {
+                                        message.error('导出失败');
+                                    }
+                                }}
+                                className="flex items-center gap-2 p-4 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50 rounded-lg transition-colors"
+                            >
+                                <Download className="w-5 h-5 text-orange-600" />
+                                <span className="text-sm font-medium text-orange-600">导出商品</span>
+                            </button>
                         </div>
                     </div>
+                </div>
+
+                {/* Charts Row 1 */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Sales Trend */}
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        {salesTrend && <SalesTrendChart dates={salesTrend.dates} sales={salesTrend.sales} />}
+                    </div>
+
+                    {/* Order Status */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        {orderStatus && <OrderStatusChart data={orderStatus.data} />}
+                    </div>
+                </div>
+
+                {/* Charts Row 2 */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Top Products */}
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        {topProducts && <TopProductsChart names={topProducts.names} sales={topProducts.sales} />}
+                    </div>
+
+                    {/* Category Sales */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        {categorySales && <CategorySalesChart data={categorySales.data} />}
+                    </div>
+                </div>
+
+                {/* User Growth Chart */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    {userGrowth && <UserGrowthChart dates={userGrowth.dates} counts={userGrowth.counts} />}
                 </div>
             </div>
         </div>

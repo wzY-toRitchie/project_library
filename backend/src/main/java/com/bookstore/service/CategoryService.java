@@ -4,6 +4,8 @@ import com.bookstore.entity.Category;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -16,10 +18,12 @@ public class CategoryService {
     @Autowired
     private BookRepository bookRepository;
 
+    @Cacheable(value = "categories")
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     public Category createCategory(Category category) {
         String name = category == null ? null : category.getName();
         if (name == null || name.trim().isEmpty()) {
@@ -34,6 +38,7 @@ public class CategoryService {
         return categoryRepository.save(entity);
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     public Category updateCategory(@NonNull Long id, Category category) {
         String name = category == null ? null : category.getName();
         if (name == null || name.trim().isEmpty()) {
@@ -50,6 +55,7 @@ public class CategoryService {
         }).orElseThrow(() -> new RuntimeException("分类不存在"));
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(@NonNull Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new RuntimeException("分类不存在");

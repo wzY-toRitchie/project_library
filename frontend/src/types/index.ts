@@ -65,3 +65,57 @@ export interface SystemSetting {
     lowStockThreshold: number;
     dashboardRange: string;
 }
+
+export interface Favorite {
+    id: number;
+    book: Book;
+    createTime: string;
+}
+
+export interface BrowsingHistory {
+    id: number;
+    book: Book;
+    viewCount: number;
+    lastViewTime: string;
+    createTime: string;
+}
+
+export interface PointsHistory {
+    id: number;
+    points: number;
+    type: string;
+    description: string;
+    orderId?: number;
+    createTime: string;
+}
+
+export interface UserPoints {
+    points: number;
+    signedInToday: boolean;
+}
+
+export interface Coupon {
+    id: number;
+    code: string;
+    name: string;
+    type: 'FULL_REDUCE' | 'DISCOUNT' | 'FREE_SHIPPING';
+    minAmount?: number;
+    value: number;
+    totalCount: number;
+    usedCount: number;
+    startTime: string;
+    endTime: string;
+    status: string;
+    createTime: string;
+    available: boolean;
+}
+
+export interface UserCoupon {
+    id: number;
+    coupon: Coupon;
+    orderId?: number;
+    status: 'UNUSED' | 'USED' | 'EXPIRED';
+    getTime: string;
+    useTime?: string;
+    available: boolean;
+}
