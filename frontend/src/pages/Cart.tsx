@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { message } from 'antd';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingCart as ShoppingCartIcon } from 'lucide-react';
@@ -99,10 +100,86 @@ const Cart: React.FC = () => {
 
             {/* Cart Table & Actions */}
             <div className="flex flex-col gap-6">
-                {/* Table Container */}
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+                {/* Mobile Card View */}
+                <div className="md:hidden flex flex-col gap-3">
+                    {/* Mobile Select All */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <input 
+                            type="checkbox" 
+                            className="size-4 rounded border-slate-300 bg-white text-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-700 dark:checked:bg-primary"
+                            checked={cartItems.length > 0 && selectedItems.size === cartItems.length}
+                            onChange={handleSelectAll}
+                        />
+                        <span className="text-sm text-slate-600 dark:text-slate-300">全选</span>
+                        <button 
+                            onClick={clearCart}
+                            className="ml-auto text-sm text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                            清空
+                        </button>
+                    </div>
+
+                    {cartItems.map((item) => (
+                        <div key={item.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                            <div className="flex gap-3">
+                                <input 
+                                    type="checkbox"
+                                    className="mt-1 size-4 rounded border-slate-300 bg-white text-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-700 dark:checked:bg-primary flex-shrink-0"
+                                    checked={selectedItems.has(item.id)}
+                                    onChange={() => handleSelectItem(item.id)}
+                                />
+                                <div className="h-20 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-700">
+                                    <img 
+                                        src={item.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'} 
+                                        alt={item.title} 
+                                        className="h-full w-full object-cover"
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <Link to={`/book/${item.id}`} className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2">
+                                        {item.title}
+                                    </Link>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.author}</p>
+                                    <p className="text-sm font-bold text-primary mt-2">¥{item.price.toFixed(2)}</p>
+                                </div>
+                                <button 
+                                    onClick={() => removeFromCart(item.id)}
+                                    className="self-start p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500">数量:</span>
+                                    <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700">
+                                        <button 
+                                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                            className="flex size-7 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        >
+                                            <Minus size={12} />
+                                        </button>
+                                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                        <button 
+                                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                            className="flex size-7 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                    小计: ¥{(item.price * item.quantity).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px] text-left">
+                        <table className="w-full text-left">
                             <thead className="bg-slate-50 dark:bg-slate-800/50">
                                 <tr>
                                     <th className="w-16 px-6 py-4 text-center">
@@ -189,7 +266,7 @@ const Cart: React.FC = () => {
                         </table>
                     </div>
                     
-                    {/* Mobile/Empty State Hint */}
+                    {/* Desktop Footer */}
                     <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50 px-6 py-3 dark:bg-slate-800/50">
                         <div className="flex items-center justify-between">
                             <button 

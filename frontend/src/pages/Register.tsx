@@ -22,12 +22,15 @@ const Register: React.FC = () => {
         const password = formValues.password;
         let score = 0;
         if (password.length >= 8) score += 1;
-        if (/[0-9]/.test(password)) score += 1;
-        if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+        if (/[a-z]/.test(password)) score += 1;  // 小写字母
+        if (/[A-Z]/.test(password)) score += 1;  // 大写字母
+        if (/[0-9]/.test(password)) score += 1;  // 数字
+        if (/[^a-zA-Z0-9]/.test(password)) score += 1;  // 特殊字符
         return score;
     }, [formValues.password]);
 
-    const strengthLabel = strength === 3 ? '强' : strength === 2 ? '中' : '弱';
+    const strengthLabel = strength >= 4 ? '强' : strength >= 3 ? '中' : strength >= 2 ? '弱' : '非常弱';
+    const strengthColor = strength >= 4 ? 'text-green-500' : strength >= 3 ? 'text-yellow-500' : strength >= 2 ? 'text-orange-500' : 'text-red-500';
 
     const onFinish = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -45,6 +48,22 @@ const Register: React.FC = () => {
         }
         if (!formValues.acceptedTerms) {
             message.error('请同意服务条款与隐私政策');
+            return;
+        }
+        if (password.length < 8) {
+            message.error('密码长度不能少于8个字符');
+            return;
+        }
+        if (!/[A-Z]/.test(password)) {
+            message.error('密码必须包含至少一个大写字母');
+            return;
+        }
+        if (!/[a-z]/.test(password)) {
+            message.error('密码必须包含至少一个小写字母');
+            return;
+        }
+        if (!/[0-9]/.test(password)) {
+            message.error('密码必须包含至少一个数字');
             return;
         }
         setLoading(true);
@@ -93,11 +112,11 @@ const Register: React.FC = () => {
                                 用户名
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                     person
                                 </span>
                                 <input
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
                                     id="username"
                                     name="username"
                                     placeholder="请输入用户名"
@@ -113,11 +132,11 @@ const Register: React.FC = () => {
                                 邮箱
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                     mail
                                 </span>
                                 <input
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
                                     id="email"
                                     name="email"
                                     placeholder="请输入邮箱"
@@ -133,11 +152,11 @@ const Register: React.FC = () => {
                                 手机号
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                     phone_iphone
                                 </span>
                                 <input
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
                                     id="phone"
                                     name="phone"
                                     placeholder="选填"
@@ -152,11 +171,11 @@ const Register: React.FC = () => {
                                 密码
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                     lock
                                 </span>
                                 <input
-                                    className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
                                     id="password"
                                     name="password"
                                     placeholder="请输入密码"
@@ -173,22 +192,26 @@ const Register: React.FC = () => {
                                     <span className="material-symbols-outlined text-xl">{showPassword ? 'visibility' : 'visibility_off'}</span>
                                 </button>
                             </div>
-                            <div className="mt-2">
+                                <div className="mt-2">
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                                        强度：<span className="text-primary">{strengthLabel}</span>
+                                        强度：<span className={strengthColor}>{strengthLabel}</span>
                                     </span>
                                 </div>
                                 <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex gap-0.5">
-                                    {[0, 1, 2].map((index) => (
+                                    {[0, 1, 2, 3, 4].map((index) => (
                                         <div
                                             key={index}
-                                            className={`h-full flex-1 ${strength > index ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}
+                                            className={`h-full flex-1 ${
+                                                strength > index 
+                                                    ? strength >= 4 ? 'bg-green-500' : strength >= 3 ? 'bg-yellow-500' : strength >= 2 ? 'bg-orange-500' : 'bg-red-500'
+                                                    : 'bg-slate-200 dark:bg-slate-700'
+                                            }`}
                                         ></div>
                                     ))}
                                 </div>
                                 <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                                    建议使用 8 位以上并包含字母、数字与符号。
+                                    密码需至少8位，包含大小写字母和数字。
                                 </p>
                             </div>
                         </div>
@@ -197,11 +220,11 @@ const Register: React.FC = () => {
                                 确认密码
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                     verified_user
                                 </span>
                                 <input
-                                    className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-primary/50 dark:border-primary/50 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-primary/50 dark:border-primary/50 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
                                     id="confirm-password"
                                     name="confirm-password"
                                     placeholder="请再次输入密码"

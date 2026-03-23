@@ -117,9 +117,9 @@ const AdminCategories: React.FC = () => {
 
             <div className="flex flex-col gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
                     <input
-                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索分类名称..."
                         type="text"
                         value={searchQuery}
@@ -184,8 +184,11 @@ const AdminCategories: React.FC = () => {
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">分类名称</label>
                             <input
                                 className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                                name="categoryName"
+                                data-testid="category-name-input"
                                 value={formName}
                                 onChange={(e) => setFormName(e.target.value)}
+                                autoFocus
                             />
                         </div>
                         <div className="flex justify-end gap-3">

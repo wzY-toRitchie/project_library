@@ -8,6 +8,7 @@ import com.bookstore.payload.response.MessageResponse;
 import com.bookstore.repository.UserRepository;
 import com.bookstore.security.jwt.JwtUtils;
 import com.bookstore.security.services.UserDetailsImpl;
+import com.bookstore.service.LoginAttemptService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@CrossOrigin(origins = "http://localhost:5173", maxAge = 3600, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -41,12 +41,24 @@ public class AuthController {
   @Autowired
   JwtUtils jwtUtils;
 
+  @Autowired
+  LoginAttemptService loginAttemptService;
+
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-    logger.info("Entering authenticateUser with username: {}", loginRequest.getUsername());
+    String username = loginRequest.getUsername();
+    
+    // 检查是否被锁定
+    if (loginAttemptService.isBlocked(username)) {
+      long remainingMinutes = loginAttemptService.getRemainingLockTime(username);
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("账户已被锁定，请在 " + remainingMinutes + " 分钟后重试"));
+    }
+    
     try {
+      logger.info("Login attempt for user: {}", username);
       Authentication authentication = authenticationManager.authenticate(
-          new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+          new UsernamePasswordAuthenticationToken(username, loginRequest.getPassword()));
 
       SecurityContextHolder.getContext().setAuthentication(authentication);
       String jwt = jwtUtils.generateJwtToken(authentication);
@@ -55,6 +67,10 @@ public class AuthController {
       List<String> roles = userDetails.getAuthorities().stream()
           .map(item -> item.getAuthority())
           .collect(Collectors.toList());
+      
+      // 登录成功，重置失败次数
+      loginAttemptService.loginSucceeded(username);
+      logger.info("Login successful for user: {}", username);
 
       return ResponseEntity.ok(new JwtResponse(jwt,
           userDetails.getId(),
@@ -64,9 +80,23 @@ public class AuthController {
           userDetails.getPhoneNumber(),
           userDetails.getAddress(),
           roles));
+    } catch (org.springframework.security.authentication.BadCredentialsException e) {
+      // 密码错误 - 记录失败次数
+      loginAttemptService.loginFailed(username);
+      int remainingAttempts = loginAttemptService.getRemainingAttempts(username);
+      logger.warn("Bad credentials for user: {}", username);
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("用户名或密码错误，还剩 " + remainingAttempts + " 次尝试机会"));
+    } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+      // 用户不存在 - 不记录失败次数（防止用户名枚举攻击）
+      logger.warn("User not found: {}", username);
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("用户名或密码错误"));
     } catch (Exception e) {
-      logger.error("Authentication failed", e);
-      throw e;
+      // 未知异常 - 不记录失败次数，返回通用错误信息
+      logger.error("Login error for user: {}, exception: {}", username, e.getMessage(), e);
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("登录服务异常，请稍后重试"));
     }
   }
 
@@ -82,6 +112,25 @@ public class AuthController {
       return ResponseEntity
           .badRequest()
           .body(new MessageResponse("Error: Email is already in use!"));
+    }
+
+    // 密码强度验证
+    String password = signUpRequest.getPassword();
+    if (password.length() < 8) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("密码长度至少8位"));
+    }
+    if (!password.matches(".*[A-Z].*")) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("密码必须包含至少一个大写字母"));
+    }
+    if (!password.matches(".*[a-z].*")) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("密码必须包含至少一个小写字母"));
+    }
+    if (!password.matches(".*[0-9].*")) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("密码必须包含至少一个数字"));
     }
 
     // Create new user's account

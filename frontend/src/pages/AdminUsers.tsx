@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import { message, Modal } from 'antd';
 import { useAuth } from '../context/AuthContext';
+import { UserRowSkeleton } from '../components/Skeleton';
+import EmptyState, { TableEmpty } from '../components/EmptyState';
 
 interface User {
     id: number;
@@ -37,7 +39,7 @@ const AdminUsers: React.FC = () => {
             setUsers(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Failed to fetch users:', error);
-            message.error('获取用户列表失败');
+            message.error('用户数据加载失败，请刷新页面');
         } finally {
             setLoading(false);
         }
@@ -125,9 +127,9 @@ const AdminUsers: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
                     <input
-                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索用户名、邮箱或手机号..."
                         type="text"
                         value={searchQuery}
@@ -167,13 +169,15 @@ const AdminUsers: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">加载中...</td>
-                                </tr>
+                                <>
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                    <UserRowSkeleton />
+                                </>
                             ) : filteredUsers.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">暂无用户</td>
-                                </tr>
+                                <TableEmpty colSpan={7} icon="user" title="暂无用户数据" />
                             ) : (
                                 filteredUsers.map(target => (
                                     <tr key={target.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">

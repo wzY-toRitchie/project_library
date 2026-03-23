@@ -1,22 +1,31 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { message, Popover, List, Badge, Empty, Avatar } from 'antd';
+import { Popover, List, Badge, Empty, Avatar } from 'antd';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../api';
 import type { Notification } from '../types';
 
 const AdminLayout: React.FC = () => {
-    const { user, logout, isAuthenticated } = useAuth();
+    const { user, logout, isAuthenticated, isAdmin } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
+    // 认证检查 - 未登录或非管理员时立即重定向
     React.useEffect(() => {
-        if (!isAuthenticated || !(user?.roles?.includes('ADMIN') || user?.roles?.includes('ROLE_ADMIN'))) {
-            // Optional: Add a message here if you want
-            // message.error('无权访问管理员后台');
-            navigate('/login');
+        if (!isAuthenticated || !isAdmin) {
+            navigate('/login', { replace: true });
         }
-    }, [isAuthenticated, user, navigate]);
+    }, [isAuthenticated, isAdmin, navigate]);
+
+    // 未认证时显示加载状态，防止子组件提前渲染
+    if (!isAuthenticated || !isAdmin) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     const handleLogout = () => {
         logout();
@@ -28,7 +37,7 @@ const AdminLayout: React.FC = () => {
 
     const fetchNotifications = React.useCallback(async () => {
         try {
-            const response = await axios.get<Notification[]>('http://localhost:8080/api/notifications', { withCredentials: true });
+            const response = await api.get<Notification[]>('/notifications');
             // Sort by createTime desc
             const sorted = response.data.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
             setNotifications(sorted);
@@ -46,17 +55,27 @@ const AdminLayout: React.FC = () => {
         }
     }, [isAuthenticated, fetchNotifications]);
 
-    const handleMarkAsRead = async (id: number) => {
+    const handleMarkAsRead = async () => {
         try {
-            await axios.put(`http://localhost:8080/api/notifications/${id}/read`, {}, { withCredentials: true });
+            await api.post('/notifications/mark-read');
             fetchNotifications();
         } catch (error) {
-            console.error('Failed to mark notification as read', error);
+            console.error('Failed to mark notifications as read', error);
         }
     };
 
     const notificationContent = (
         <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
+            {unreadCount > 0 && (
+                <div className="px-4 py-2 border-b border-gray-100">
+                    <button 
+                        onClick={handleMarkAsRead}
+                        className="text-xs text-primary hover:underline"
+                    >
+                        全部已读
+                    </button>
+                </div>
+            )}
             <List
                 itemLayout="horizontal"
                 dataSource={notifications}
@@ -64,7 +83,6 @@ const AdminLayout: React.FC = () => {
                 renderItem={(item) => (
                     <List.Item 
                         className={`cursor-pointer hover:bg-gray-50 transition-colors ${!item.read ? 'bg-blue-50/50' : ''}`}
-                        onClick={() => !item.read && handleMarkAsRead(item.id)}
                         extra={!item.read && <Badge status="processing" />}
                     >
                         <List.Item.Meta
@@ -89,7 +107,7 @@ const AdminLayout: React.FC = () => {
     );
 
     const handleMobileMenuClick = () => {
-        message.info('移动端菜单暂未开放');
+        setMobileMenuOpen(!mobileMenuOpen);
     };
 
     const isActive = (path: string) => {
@@ -100,8 +118,16 @@ const AdminLayout: React.FC = () => {
 
     return (
         <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-[#111418] dark:text-white font-display overflow-hidden">
+            {/* Mobile Menu Overlay */}
+            {mobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-white dark:bg-[#1a2632] border-r border-[#e5e7eb] dark:border-[#2a3b4d] flex-shrink-0 flex flex-col justify-between hidden md:flex transition-colors duration-200">
+            <aside className={`w-64 bg-white dark:bg-[#1a2632] border-r border-[#e5e7eb] dark:border-[#2a3b4d] flex-shrink-0 flex flex-col justify-between fixed md:relative h-full z-50 transform transition-transform duration-300 md:transform-none ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
                 <div className="flex flex-col">
                     <div className="h-16 flex items-center px-6 border-b border-[#e5e7eb] dark:border-[#2a3b4d]">
                         <div className="flex items-center gap-3">
@@ -115,6 +141,7 @@ const AdminLayout: React.FC = () => {
                         {/* Dashboard */}
                         <Link 
                             to="/admin" 
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin')}`}
                         >
                             <span className={`material-symbols-outlined ${location.pathname === '/admin' ? 'fill-1' : ''}`}>dashboard</span>
@@ -124,6 +151,7 @@ const AdminLayout: React.FC = () => {
                         {/* Inventory */}
                         <Link 
                             to="/admin/books" 
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/books')}`}
                         >
                             <span className="material-symbols-outlined">inventory_2</span>
@@ -132,6 +160,7 @@ const AdminLayout: React.FC = () => {
 
                         <Link
                             to="/admin/categories"
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/categories')}`}
                         >
                             <span className="material-symbols-outlined">category</span>
@@ -140,6 +169,7 @@ const AdminLayout: React.FC = () => {
                         
                         <Link 
                             to="/admin/orders" 
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/orders')}`}
                         >
                             <span className="material-symbols-outlined">shopping_cart</span>
@@ -148,6 +178,7 @@ const AdminLayout: React.FC = () => {
                         
                         <Link
                             to="/admin/users"
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/users')}`}
                         >
                             <span className="material-symbols-outlined">group</span>
@@ -156,6 +187,7 @@ const AdminLayout: React.FC = () => {
                         
                         <Link
                             to="/admin/settings"
+                            onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive('/admin/settings')}`}
                         >
                             <span className="material-symbols-outlined">settings</span>
@@ -219,7 +251,9 @@ const AdminLayout: React.FC = () => {
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-hidden relative">
-                    <Outlet />
+                    <div className="h-full animate-fadeIn">
+                        <Outlet />
+                    </div>
                 </div>
             </main>
         </div>

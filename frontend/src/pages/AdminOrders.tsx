@@ -1,32 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import api from '../api';
 import { message, Modal } from 'antd';
-
-interface OrderItem {
-    id: number;
-    quantity: number;
-    price: number;
-    book?: {
-        id: number;
-        title?: string;
-        author?: string;
-    };
-}
-
-interface OrderUser {
-    id: number;
-    username?: string;
-    email?: string;
-}
-
-interface Order {
-    id: number;
-    totalPrice: number | string;
-    status: string;
-    createTime?: string;
-    items?: OrderItem[];
-    user?: OrderUser;
-}
+import { exportOrders } from '../api/export';
+import type { Order } from '../types';
+import { TableSkeleton } from '../components/Skeleton';
+import EmptyState, { TableEmpty } from '../components/EmptyState';
 
 const statusText: Record<string, string> = {
     PENDING: '待支付',
@@ -51,15 +29,19 @@ const AdminOrders: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED'>('all');
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [batchLoading, setBatchLoading] = useState(false);
 
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/orders');
-            setOrders(Array.isArray(response.data) ? response.data : []);
+            const response = await api.get('/orders', { params: { size: 100 } });
+            // API 返回分页数据，需要提取 content 字段
+            const data = response.data;
+            setOrders(Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []));
         } catch (error) {
             console.error('Failed to fetch orders:', error);
-            message.error('获取订单列表失败');
+            message.error('订单数据加载失败，请刷新页面');
         } finally {
             setLoading(false);
         }
@@ -119,13 +101,106 @@ const AdminOrders: React.FC = () => {
         setSelectedOrder(null);
     };
 
+    // 批量选择相关
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredOrders.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredOrders.map(o => o.id)));
+        }
+    };
+
+    const clearSelection = () => {
+        setSelectedIds(new Set());
+    };
+
+    // 批量操作
+    const batchUpdateStatus = async (status: string) => {
+        if (selectedIds.size === 0) {
+            message.warning('请先选择订单');
+            return;
+        }
+
+        const statusMap: Record<string, string> = {
+            'PAID': 'PENDING',
+            'SHIPPED': 'PAID'
+        };
+
+        const validOrders = orders.filter(o => {
+            return selectedIds.has(o.id) && o.status === statusMap[status];
+        });
+
+        if (validOrders.length === 0) {
+            message.warning('没有符合条件的订单');
+            return;
+        }
+
+        if (!window.confirm(`确定要将 ${validOrders.length} 个订单标记为${status === 'PAID' ? '已支付' : '已发货'}吗？`)) {
+            return;
+        }
+
+        setBatchLoading(true);
+        try {
+            const response = await api.post('/orders/batch/status', {
+                orderIds: validOrders.map(o => o.id),
+                status
+            });
+            message.success(response.data.message || `成功更新 ${response.data.count} 个订单`);
+            clearSelection();
+            fetchOrders();
+        } catch (error) {
+            console.error('Batch update failed:', error);
+            message.error('批量操作失败');
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
+    const batchExport = async () => {
+        if (selectedIds.size === 0) {
+            message.warning('请先选择订单');
+            return;
+        }
+
+        // 导出选中的订单为CSV
+        const selectedOrders = orders.filter(o => selectedIds.has(o.id));
+        const csv = ['订单号,用户,金额,状态,下单时间'];
+        selectedOrders.forEach(order => {
+            csv.push(`${'ORD-' + String(order.id).padStart(6, '0')},${order.user?.username || ''},${Number(order.totalPrice || 0).toFixed(2)},${statusText[order.status] || order.status},${order.createTime ? new Date(order.createTime).toLocaleString() : ''}`);
+        });
+
+        const blob = new Blob(['\ufeff' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'selected_orders.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+        message.success('导出成功');
+    };
+
+    const isAllSelected = filteredOrders.length > 0 && selectedIds.size === filteredOrders.length;
+    const isIndeterminate = selectedIds.size > 0 && selectedIds.size < filteredOrders.length;
+
     return (
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
                     <input
-                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索订单号、用户或图书..."
                         type="text"
                         value={searchQuery}
@@ -172,11 +247,60 @@ const AdminOrders: React.FC = () => {
                 </div>
             </div>
 
+            {/* Batch Operations Toolbar */}
+            {selectedIds.size > 0 && (
+                <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            已选择 <span className="text-primary font-bold">{selectedIds.size}</span> 个订单
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => batchUpdateStatus('PAID')}
+                            disabled={batchLoading}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            批量支付
+                        </button>
+                        <button
+                            onClick={() => batchUpdateStatus('SHIPPED')}
+                            disabled={batchLoading}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            批量发货
+                        </button>
+                        <button
+                            onClick={batchExport}
+                            disabled={batchLoading}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            批量导出
+                        </button>
+                        <button
+                            onClick={clearSelection}
+                            className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-colors"
+                        >
+                            取消选择
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                                <th className="px-4 py-4 w-12">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAllSelected}
+                                        ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">订单号</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[180px]">用户</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">商品</th>
@@ -188,19 +312,23 @@ const AdminOrders: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">加载中...</td>
-                                </tr>
+                                <TableSkeleton rows={5} cols={8} />
                             ) : filteredOrders.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">暂无订单</td>
-                                </tr>
+                                <TableEmpty colSpan={8} icon="order" title="暂无订单数据" />
                             ) : (
                                 filteredOrders.map(order => {
                                     const itemCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
-                                    return (
-                                        <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">ORD-{order.id.toString().padStart(6, '0')}</td>
+                                        return (
+                                            <tr key={order.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${selectedIds.has(order.id) ? 'bg-primary/5' : ''}`}>
+                                                <td className="px-4 py-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.has(order.id)}
+                                                        onChange={() => toggleSelect(order.id)}
+                                                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                                                    />
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">ORD-{order.id.toString().padStart(6, '0')}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-semibold text-slate-900 dark:text-white">{order.user?.username || '未知用户'}</span>

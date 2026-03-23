@@ -30,7 +30,6 @@ const Login: React.FC = () => {
             login(response.data);
             message.success('登录成功！');
             
-            // Redirect based on role
             if (response.data.roles && (response.data.roles.includes('ADMIN') || response.data.roles.includes('ROLE_ADMIN'))) {
                 navigate('/admin');
             } else {
@@ -38,9 +37,17 @@ const Login: React.FC = () => {
             }
         } catch (error) {
             console.error('Login failed:', error);
-            const errorMessage = axios.isAxiosError(error)
-                ? (typeof error.response?.data === 'string' ? error.response?.data : '用户名或密码错误')
-                : '用户名或密码错误';
+            let errorMessage = '登录失败，请稍后重试';
+            
+            if (axios.isAxiosError(error)) {
+                const data = error.response?.data;
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data && typeof data === 'object' && 'message' in data) {
+                    errorMessage = (data as { message: string }).message;
+                }
+            }
+            
             message.error(errorMessage);
         } finally {
             setLoading(false);
@@ -49,55 +56,65 @@ const Login: React.FC = () => {
 
     return (
         <div className="flex-1 flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full bg-white dark:bg-slate-900 rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
-                <div className="hidden md:flex md:w-1/2 bg-primary/10 relative items-center justify-center p-12 border-r border-slate-100 dark:border-slate-800">
-                    <div className="z-10 text-center">
-                        <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/20 rounded-2xl mb-6">
-                            <span className="material-symbols-outlined text-primary text-5xl">auto_stories</span>
+            <div className="max-w-4xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+                {/* Left Panel - Atmospheric Bookstore */}
+                <div className="hidden md:flex md:w-1/2 hero-pattern relative items-center justify-center p-12">
+                    {/* Grain texture overlay */}
+                    <div className="absolute inset-0 bg-noise"></div>
+                    
+                    <div className="z-10 text-center text-white">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-8 border border-white/20">
+                            <span className="material-symbols-outlined text-4xl text-amber-300">auto_stories</span>
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
-                            清爽书店
+                        <h2 className="font-display text-4xl font-bold mb-4 leading-tight">
+                            JavaBooks
                         </h2>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed max-w-xs mx-auto">
-                            你的专属知识入口，管理藏书并发现新故事。
+                        <p className="text-blue-100/70 font-body text-base leading-relaxed max-w-xs mx-auto mb-8">
+                            你的专属知识入口，在书海中发现新的世界。
                         </p>
+                        {/* Decorative book quote */}
+                        <div className="mt-6 pt-6 border-t border-white/10">
+                            <p className="font-display italic text-white/50 text-sm">
+                                "书籍是人类进步的阶梯"
+                            </p>
+                        </div>
                     </div>
-                    <div className="absolute top-0 left-0 w-full h-full opacity-40 pointer-events-none">
-                        <div className="absolute top-10 left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-10 right-10 w-48 h-48 bg-primary/20 rounded-full blur-3xl"></div>
-                    </div>
-                    <img
-                        alt="Library background"
-                        className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-20"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx4_8kcfrKcJWfYVjFinWk_ZsZgUe9MXIKZ20PvcuDjQ_rYeysm3oDkaNuvUhOMOyAEICHAfWjzOgf3YzPh-iGWUVmoQB7FF5cpQOqlypCLkjj7NIXK_0zfmwp9zgf_l3nvwaWe_bvhdZpQKji3_zeeEocwhrXr8XW1QHtinjnjCc5Pyq7iGrXHPHD9qSllQA4Hv4cnFLx1whecNYSg0XxxaeJUIUCRQjbtyZZW2HH1qnJX3g18oNYDip1xvHq8Qqf1Pz_O_CFyhk"
-                    />
+                    
+                    {/* Floating decorative elements */}
+                    <div className="absolute top-12 right-16 w-24 h-24 rounded-full bg-amber-400/10 blur-2xl animate-float"></div>
+                    <div className="absolute bottom-16 left-12 w-32 h-32 rounded-full bg-blue-400/10 blur-2xl animate-float" style={{ animationDelay: '3s' }}></div>
                 </div>
-                <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
+
+                {/* Right Panel - Form */}
+                <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-center bg-paper">
                     <div className="mb-10 text-center md:text-left">
                         <div className="md:hidden flex justify-center mb-6">
-                            <span className="material-symbols-outlined text-primary text-4xl">auto_stories</span>
+                            <div className="inline-flex items-center justify-center w-14 h-14 hero-pattern rounded-xl">
+                                <span className="material-symbols-outlined text-2xl text-amber-300">auto_stories</span>
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                        <h1 className="font-display text-3xl font-bold text-ink dark:text-white mb-2">
                             欢迎回来
                         </h1>
-                        <p className="text-slate-500 dark:text-slate-400">
-                            请输入账号信息继续登录。
+                        <p className="text-ink-light dark:text-slate-400 font-body">
+                            登录你的账户，继续探索好书。
                         </p>
                     </div>
-                    <form className="space-y-6" onSubmit={onFinish}>
+
+                    <form className="space-y-5" onSubmit={onFinish}>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="username">
-                                用户名或邮箱
+                            <label className="block text-sm font-semibold text-ink dark:text-slate-300 mb-2 font-body" htmlFor="username">
+                                用户名
                             </label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                     <span className="material-symbols-outlined text-[20px]">person</span>
                                 </div>
                                 <input
-                                    className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                    className="input-elegant block w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800 text-ink dark:text-white placeholder-slate-400 font-body text-sm"
                                     id="username"
                                     name="username"
-                                    placeholder="请输入用户名或邮箱"
+                                    placeholder="请输入用户名"
                                     required
                                     type="text"
                                     value={formValues.username}
@@ -105,16 +122,17 @@ const Login: React.FC = () => {
                                 />
                             </div>
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="password">
+                            <label className="block text-sm font-semibold text-ink dark:text-slate-300 mb-2 font-body" htmlFor="password">
                                 密码
                             </label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                     <span className="material-symbols-outlined text-[20px]">lock</span>
                                 </div>
                                 <input
-                                    className="block w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                    className="input-elegant block w-full pl-11 pr-11 py-3 bg-white dark:bg-slate-800 text-ink dark:text-white placeholder-slate-400 font-body text-sm"
                                     id="password"
                                     name="password"
                                     placeholder="请输入密码"
@@ -124,7 +142,7 @@ const Login: React.FC = () => {
                                     onChange={(event) => setFormValues(prev => ({ ...prev, password: event.target.value }))}
                                 />
                                 <button
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-primary transition-colors"
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
                                 >
@@ -132,52 +150,67 @@ const Login: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
                         <div className="flex items-center justify-between">
                             <div className="flex items-center">
                                 <input
-                                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300 dark:border-slate-700 rounded transition-colors cursor-pointer"
+                                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300 dark:border-slate-700 rounded cursor-pointer"
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
                                     checked={formValues.remember}
                                     onChange={(event) => setFormValues(prev => ({ ...prev, remember: event.target.checked }))}
                                 />
-                                <label className="ml-2 block text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none" htmlFor="remember-me">
-                                记住我
+                                <label className="ml-2 block text-sm text-ink-light dark:text-slate-400 cursor-pointer select-none font-body" htmlFor="remember-me">
+                                    记住我
                                 </label>
                             </div>
                             <div className="text-sm">
                                 <button
                                     type="button"
-                                    className="font-medium text-primary hover:text-primary/80 transition-colors"
+                                    className="font-medium text-primary hover:text-accent transition-colors font-body"
                                 >
                                     忘记密码？
                                 </button>
                             </div>
                         </div>
+
                         <button
-                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98] disabled:opacity-60"
+                            className="btn-primary w-full flex justify-center items-center py-3 text-sm font-body"
                             type="submit"
                             disabled={loading}
                         >
-                            {loading ? '正在登录...' : '登录'}
+                            {loading ? (
+                                <span className="flex items-center gap-2">
+                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                    正在登录...
+                                </span>
+                            ) : '登录'}
                         </button>
                     </form>
-                    <div className="mt-10 text-center">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+
+                    <div className="mt-8 text-center">
+                        <p className="text-sm text-ink-light dark:text-slate-400 font-body">
                             还没有账号？
-                            <Link className="font-semibold text-primary hover:text-primary/80 transition-colors ml-1" to="/register">
+                            <Link className="link-elegant font-semibold ml-1" to="/register">
                                 立即注册
                             </Link>
                         </p>
                     </div>
-                    <div className="mt-auto pt-8 flex items-center justify-center space-x-4 opacity-50 grayscale hover:grayscale-0 transition-all">
-                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                            JavaWeb Bookstore 项目 v1.0
+
+                    {/* Footer branding */}
+                    <div className="mt-auto pt-8 flex items-center justify-center">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-body font-semibold">
+                            JavaBooks v1.0
                         </span>
                     </div>
                 </div>
             </div>
+
+            {/* Theme Toggle */}
             <div className="fixed bottom-6 right-6">
                 <button
                     className="p-3 bg-white dark:bg-slate-800 shadow-lg rounded-full text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors"

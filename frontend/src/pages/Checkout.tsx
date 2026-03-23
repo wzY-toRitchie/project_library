@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { message } from 'antd';
 import { 
     MapPin, 
     ShoppingBag, 
-    CreditCard, 
-    Check, 
     ChevronRight, 
-    Lock, 
     ArrowRight, 
     Plus,
-    MessageSquare, // For WeChat
-    Truck // For COD
+    Ticket,
+    ChevronDown,
+    X
 } from 'lucide-react';
 import api from '../api';
+import { getAvailableUserCoupons } from '../api/coupons';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import type { UserCoupon } from '../types';
 
 interface CheckoutItem {
     id: number;
@@ -43,7 +43,23 @@ const Checkout: React.FC = () => {
     const totalPrice = state?.totalPrice || 0;
 
     const [loading, setLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'wechat' | 'cod'>('credit_card');
+    
+    // Coupon State
+    const [availableCoupons, setAvailableCoupons] = useState<UserCoupon[]>([]);
+    const [selectedCoupon, setSelectedCoupon] = useState<UserCoupon | null>(null);
+    const [showCouponList, setShowCouponList] = useState(false);
+    const [discountAmount, setDiscountAmount] = useState(0);
+
+    // Address State
+    const [addresses, setAddresses] = useState<Array<{
+        id: number;
+        fullName: string;
+        phoneNumber: string;
+        address: string;
+        isDefault: boolean;
+    }>>([]);
+    const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+    const [hasFetchedAddresses, setHasFetchedAddresses] = useState(false);
 
     const hasNoItems = !state || items.length === 0;
 
@@ -68,7 +84,85 @@ const Checkout: React.FC = () => {
             }
         };
         fetchProfile();
-    }, [login, user]); 
+    }, [login, user]);
+
+    // Fetch available coupons
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            try {
+                const coupons = await getAvailableUserCoupons();
+                setAvailableCoupons(coupons);
+            } catch (error) {
+                console.error('Failed to fetch coupons:', error);
+            }
+        };
+        fetchCoupons();
+    }, []);
+
+    // Fetch addresses and auto-select default
+    useEffect(() => {
+        const fetchAddresses = async () => {
+            if (!user?.id || hasFetchedAddresses) return;
+            try {
+                const response = await api.get('/users/addresses');
+                const addrList = response.data;
+                setAddresses(addrList);
+                // Auto-select default address
+                const defaultAddr = addrList.find((a: { isDefault: boolean }) => a.isDefault);
+                if (defaultAddr) {
+                    setSelectedAddressId(defaultAddr.id);
+                } else if (addrList.length > 0) {
+                    setSelectedAddressId(addrList[0].id);
+                }
+                setHasFetchedAddresses(true);
+            } catch (error) {
+                console.error('Failed to fetch addresses:', error);
+            }
+        };
+        fetchAddresses();
+    }, [user?.id, hasFetchedAddresses]);
+
+    // Get selected address
+    const selectedAddress = addresses.find(a => a.id === selectedAddressId);
+
+    // Calculate discount amount
+    useEffect(() => {
+        if (selectedCoupon && selectedCoupon.coupon) {
+            const coupon = selectedCoupon.coupon;
+            if (coupon.type === 'FULL_REDUCE') {
+                if (totalPrice >= (coupon.minAmount || 0)) {
+                    setDiscountAmount(coupon.value);
+                } else {
+                    setDiscountAmount(0);
+                }
+            } else if (coupon.type === 'DISCOUNT') {
+                setDiscountAmount(totalPrice * (1 - coupon.value));
+            }
+        } else {
+            setDiscountAmount(0);
+        }
+    }, [selectedCoupon, totalPrice]);
+
+    // Handle coupon selection
+    const handleSelectCoupon = useCallback((coupon: UserCoupon) => {
+        setSelectedCoupon(coupon);
+        setShowCouponList(false);
+    }, []);
+
+    // Clear coupon selection
+    const handleClearCoupon = useCallback(() => {
+        setSelectedCoupon(null);
+    }, []);
+
+    // Format discount display
+    const formatDiscount = (coupon: UserCoupon['coupon']) => {
+        if (coupon.type === 'FULL_REDUCE') {
+            return `满${coupon.minAmount}减${coupon.value}`;
+        } else if (coupon.type === 'DISCOUNT') {
+            return `${(coupon.value * 10).toFixed(0)}折`;
+        }
+        return '优惠';
+    };
 
     // Redirect if no items
     if (hasNoItems) {
@@ -78,16 +172,20 @@ const Checkout: React.FC = () => {
     const handleSubmitOrder = async () => {
         setLoading(true);
         try {
-            const orderData = {
-                user: { id: user?.id },
-                totalPrice: totalPrice,
-                status: 'PENDING',
+            const orderData: {
+                items: { bookId: number; quantity: number }[];
+                couponId?: number;
+            } = {
                 items: items.map(item => ({
-                    book: { id: item.id },
-                    quantity: item.quantity,
-                    price: item.price
+                    bookId: item.id,
+                    quantity: item.quantity
                 }))
             };
+
+            // Add coupon if selected
+            if (selectedCoupon) {
+                orderData.couponId = selectedCoupon.id;
+            }
 
             const response = await api.post('/orders', orderData);
             message.success('订单提交成功！');
@@ -99,7 +197,7 @@ const Checkout: React.FC = () => {
                 navigate(`/payment/${response.data.id}`);
             } else {
                 // Fallback if backend doesn't return the order object
-                navigate('/orders');
+                navigate('/profile?tab=orders');
             }
         } catch (error) {
             console.error('Checkout failed:', error);
@@ -145,20 +243,44 @@ const Checkout: React.FC = () => {
                                 </button>
                             </div>
                             <div className="p-6 grid gap-4">
-                                {/* Selected Address Card */}
-                                <div className="relative flex items-start gap-4 p-4 rounded-lg border-2 border-primary bg-primary/5 dark:bg-primary/10 cursor-pointer transition-all">
-                                    <div className="absolute top-4 right-4 text-primary">
-                                        <Check size={24} className="fill-current" />
+                                {/* Address List */}
+                                {addresses.length > 0 ? (
+                                    <div className="grid gap-3">
+                                        {addresses.map(addr => (
+                                            <div
+                                                key={addr.id}
+                                                onClick={() => setSelectedAddressId(addr.id)}
+                                                className={`relative flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                                    selectedAddressId === addr.id
+                                                        ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                                                        : 'border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                }`}
+                                            >
+                                                {selectedAddressId === addr.id && (
+                                                    <div className="absolute top-4 right-4 text-primary">
+                                                        <Check size={20} className="fill-current" />
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[#111418] dark:text-white text-base font-bold">{addr.fullName}</p>
+                                                        {addr.isDefault && (
+                                                            <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">默认</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[#617589] dark:text-gray-400 text-sm mt-1">{addr.phoneNumber}</p>
+                                                    <p className="text-[#617589] dark:text-gray-400 text-sm">{addr.address}</p>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[#111418] dark:text-white text-base font-bold">{user?.fullName || user?.username || '用户'}</p>
-                                            <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">默认</span>
+                                ) : (
+                                    <div className="relative flex items-start gap-4 p-4 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600">
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-[#617589] dark:text-gray-400 text-sm">暂无收货地址，请先添加地址</p>
                                         </div>
-                                        <p className="text-[#617589] dark:text-gray-400 text-sm mt-1">{user?.phoneNumber || '暂无电话'}</p>
-                                        <p className="text-[#617589] dark:text-gray-400 text-sm">{user?.address || '暂无收货地址，请添加'}</p>
                                     </div>
-                                </div>
+                                )}
                                 
                                 <button 
                                     onClick={() => navigate('/profile')}
@@ -200,73 +322,6 @@ const Checkout: React.FC = () => {
                                 ))}
                             </div>
                         </section>
-
-                        {/* Payment Method Section */}
-                        <section className="bg-white dark:bg-[#111418] rounded-xl shadow-sm border border-[#f0f2f4] dark:border-[#293038] overflow-hidden">
-                            <div className="p-6 border-b border-[#f0f2f4] dark:border-[#293038]">
-                                <h2 className="text-lg font-bold leading-tight flex items-center gap-2 text-slate-900 dark:text-white">
-                                    <CreditCard className="text-primary" size={24} />
-                                    支付方式
-                                </h2>
-                            </div>
-                            <div className="p-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {/* Credit Card */}
-                                    <label className="cursor-pointer relative">
-                                        <input 
-                                            type="radio" 
-                                            name="payment" 
-                                            className="peer sr-only" 
-                                            checked={paymentMethod === 'credit_card'}
-                                            onChange={() => setPaymentMethod('credit_card')}
-                                        />
-                                        <div className="h-full p-4 rounded-lg border border-[#f0f2f4] dark:border-[#293038] hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5 dark:peer-checked:bg-primary/10 transition-all flex flex-col items-center justify-center gap-3 text-center">
-                                            <CreditCard size={32} className={`text-[#617589] ${paymentMethod === 'credit_card' ? 'text-primary' : ''}`} />
-                                            <span className="font-medium text-sm text-slate-900 dark:text-white">银行卡</span>
-                                        </div>
-                                        <div className={`absolute top-2 right-2 text-primary transition-opacity ${paymentMethod === 'credit_card' ? 'opacity-100' : 'opacity-0'}`}>
-                                            <Check size={20} />
-                                        </div>
-                                    </label>
-                                    
-                                    {/* WeChat Pay */}
-                                    <label className="cursor-pointer relative">
-                                        <input 
-                                            type="radio" 
-                                            name="payment" 
-                                            className="peer sr-only"
-                                            checked={paymentMethod === 'wechat'}
-                                            onChange={() => setPaymentMethod('wechat')}
-                                        />
-                                        <div className="h-full p-4 rounded-lg border border-[#f0f2f4] dark:border-[#293038] hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5 dark:peer-checked:bg-primary/10 transition-all flex flex-col items-center justify-center gap-3 text-center">
-                                            <MessageSquare size={32} className={`text-[#617589] ${paymentMethod === 'wechat' ? 'text-green-600' : ''}`} />
-                                            <span className="font-medium text-sm text-slate-900 dark:text-white">微信支付</span>
-                                        </div>
-                                        <div className={`absolute top-2 right-2 text-primary transition-opacity ${paymentMethod === 'wechat' ? 'opacity-100' : 'opacity-0'}`}>
-                                            <Check size={20} />
-                                        </div>
-                                    </label>
-                                    
-                                    {/* Cash on Delivery */}
-                                    <label className="cursor-pointer relative">
-                                        <input 
-                                            type="radio" 
-                                            name="payment" 
-                                            className="peer sr-only"
-                                            checked={paymentMethod === 'cod'}
-                                            onChange={() => setPaymentMethod('cod')}
-                                        />
-                                        <div className="h-full p-4 rounded-lg border border-[#f0f2f4] dark:border-[#293038] hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5 dark:peer-checked:bg-primary/10 transition-all flex flex-col items-center justify-center gap-3 text-center">
-                                            <Truck size={32} className={`text-[#617589] ${paymentMethod === 'cod' ? 'text-orange-600' : ''}`} />
-                                            <span className="font-medium text-sm text-slate-900 dark:text-white">货到付款</span>
-                                        </div>
-                                        <div className={`absolute top-2 right-2 text-primary transition-opacity ${paymentMethod === 'cod' ? 'opacity-100' : 'opacity-0'}`}>
-                                            <Check size={20} />
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </section>
                     </div>
 
                     {/* Right Column: Order Summary (Sticky) */}
@@ -285,15 +340,104 @@ const Checkout: React.FC = () => {
                                         <span>运费</span>
                                         <span className="font-medium text-[#111418] dark:text-white">¥0.00</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[#617589] dark:text-slate-400">
-                                        <span>优惠</span>
-                                        <span className="font-medium text-green-600">-¥0.00</span>
+                                    
+                                    {/* Coupon Selection */}
+                                    <div className="relative">
+                                        {selectedCoupon ? (
+                                            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                                <div className="flex items-center gap-2">
+                                                    <Ticket size={18} className="text-primary" />
+                                                    <div>
+                                                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                            {selectedCoupon.coupon.name}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            {formatDiscount(selectedCoupon.coupon)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={handleClearCoupon}
+                                                    className="p-1 hover:bg-primary/10 rounded-full transition-colors"
+                                                >
+                                                    <X size={16} className="text-slate-500" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                onClick={() => setShowCouponList(!showCouponList)}
+                                                className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:border-primary hover:bg-primary/5 transition-all"
+                                            >
+                                                <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                                    <Ticket size={18} />
+                                                    <span className="text-sm">选择优惠券</span>
+                                                </span>
+                                                <ChevronDown size={18} className={`text-slate-400 transition-transform ${showCouponList ? 'rotate-180' : ''}`} />
+                                            </button>
+                                        )}
+                                        
+                                        {/* Coupon Dropdown */}
+                                        {showCouponList && !selectedCoupon && (
+                                            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-[#1a232e] border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto">
+                                                {availableCoupons.length === 0 ? (
+                                                    <div className="p-4 text-center text-slate-500 text-sm">
+                                                        暂无可用优惠券
+                                                    </div>
+                                                ) : (
+                                                    availableCoupons.map((userCoupon) => {
+                                                        const canUse = totalPrice >= (userCoupon.coupon.minAmount || 0);
+                                                        return (
+                                                            <div 
+                                                                key={userCoupon.id}
+                                                                onClick={() => canUse && handleSelectCoupon(userCoupon)}
+                                                                className={`p-3 border-b border-slate-100 dark:border-slate-700 last:border-0 ${
+                                                                    canUse 
+                                                                        ? 'hover:bg-primary/5 cursor-pointer' 
+                                                                        : 'opacity-50 cursor-not-allowed'
+                                                                }`}
+                                                            >
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <p className="font-medium text-slate-900 dark:text-white text-sm">
+                                                                            {userCoupon.coupon.name}
+                                                                        </p>
+                                                                        <p className="text-xs text-slate-500 mt-1">
+                                                                            {formatDiscount(userCoupon.coupon)}
+                                                                            {userCoupon.coupon.minAmount && ` · 满¥${userCoupon.coupon.minAmount}可用`}
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className={`text-sm font-bold ${canUse ? 'text-primary' : 'text-slate-400'}`}>
+                                                                        -¥{canUse ? userCoupon.coupon.value.toFixed(2) : '0.00'}
+                                                                    </span>
+                                                                </div>
+                                                                {!canUse && (
+                                                                    <p className="text-xs text-red-500 mt-1">
+                                                                        还需¥{(userCoupon.coupon.minAmount || 0) - totalPrice}可用
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
+                                    
+                                    {discountAmount > 0 && (
+                                        <div className="flex justify-between items-center text-[#617589] dark:text-slate-400">
+                                            <span>优惠</span>
+                                            <span className="font-medium text-green-600">-¥{discountAmount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    
                                     <div className="h-px bg-[#f0f2f4] dark:bg-[#293038] my-2"></div>
                                     <div className="flex justify-between items-end">
                                         <span className="font-bold text-lg text-[#111418] dark:text-white">订单总计</span>
                                         <div className="flex flex-col items-end">
-                                            <span className="text-3xl font-black text-primary tracking-tight">¥{totalPrice.toFixed(2)}</span>
+                                            {discountAmount > 0 && (
+                                                <span className="text-sm text-slate-400 line-through">¥{totalPrice.toFixed(2)}</span>
+                                            )}
+                                            <span className="text-3xl font-black text-primary tracking-tight">¥{(totalPrice - discountAmount).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -306,10 +450,9 @@ const Checkout: React.FC = () => {
                                         {loading ? '提交中...' : '提交订单'}
                                         {!loading && <ArrowRight size={20} />}
                                     </button>
-                                    <div className="mt-4 flex items-center justify-center gap-2 text-[#617589] dark:text-slate-400 text-xs">
-                                        <Lock size={16} />
-                                        安全支付保障
-                                    </div>
+                                    <p className="mt-4 text-center text-xs text-[#617589] dark:text-slate-400">
+                                        提交订单后可选择支付方式
+                                    </p>
                                 </div>
                             </div>
 

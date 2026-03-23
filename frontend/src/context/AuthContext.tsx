@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 
 interface User {
     id: number;
@@ -17,6 +17,7 @@ interface AuthContextType {
     login: (userData: User) => void;
     logout: () => void;
     isAuthenticated: boolean;
+    isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,8 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const isAuthenticated = !!user;
 
+    const isAdmin = useMemo(() => {
+        if (!user || !user.roles) return false;
+        return user.roles.includes('ROLE_ADMIN') || user.roles.includes('ADMIN');
+    }, [user]);
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAdmin }}>
             {children}
         </AuthContext.Provider>
     );

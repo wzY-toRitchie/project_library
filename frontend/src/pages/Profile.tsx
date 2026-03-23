@@ -2,11 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../api';
-import type { Order, Book, User, Review } from '../types';
+import { getUserPoints, getPointsHistory, signIn } from '../api/points';
+import type { Order, Book, User, Review, PointsHistory } from '../types';
 import ReviewModal from '../components/ReviewModal';
+import FavoritesList from '../components/profile/FavoritesList';
+import BrowsingHistoryList from '../components/profile/BrowsingHistoryList';
+import CouponsList from '../components/profile/CouponsList';
+import EmptyState from '../components/EmptyState';
+import OrderTimeline from '../components/OrderTimeline';
 import { message } from 'antd';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type AddressItem = {
     id: number;
@@ -20,8 +26,21 @@ const Profile: React.FC = () => {
     const { user: authUser, login } = useAuth();
     const { addToCart } = useCart();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [userProfile, setUserProfile] = useState<User | null>(null);
-    const [activeSection, setActiveSection] = useState<'orders' | 'profile' | 'address' | 'password'>('orders');
+    
+    // 读取 URL 参数 tab，默认为 'orders'
+    const tabParam = searchParams.get('tab') as 'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons' | null;
+    const [activeSection, setActiveSection] = useState<'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons'>(
+        tabParam || 'orders'
+    );
+    
+    // 当 URL 参数变化时更新 activeSection
+    useEffect(() => {
+        if (tabParam && tabParam !== activeSection) {
+            setActiveSection(tabParam);
+        }
+    }, [tabParam]);
     
     // Orders State
     const [orders, setOrders] = useState<Order[]>([]);
@@ -31,6 +50,7 @@ const Profile: React.FC = () => {
     const [orderFilter, setOrderFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [reviewedBooks, setReviewedBooks] = useState<Set<number>>(new Set());
+    const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
     // Profile Form State
     const [profileForm, setProfileForm] = useState({
@@ -69,6 +89,12 @@ const Profile: React.FC = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    // Points State
+    const [userPoints, setUserPoints] = useState(0);
+    const [signedInToday, setSignedInToday] = useState(false);
+    const [pointsHistory, setPointsHistory] = useState<PointsHistory[]>([]);
+    const [pointsLoading, setPointsLoading] = useState(false);
+
     const getErrorMessage = (error: unknown, fallback: string) => {
         if (typeof error === 'object' && error !== null && 'response' in error) {
             const response = (error as { response?: { data?: unknown } }).response;
@@ -96,9 +122,9 @@ const Profile: React.FC = () => {
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/orders/user/${authUser?.id}`);
-            const data = Array.isArray(response.data) ? response.data : [];
-            setOrders(data);
+            const response = await api.get('/orders/my');
+            const data = response.data;
+            setOrders(Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []));
         } catch (error) {
             console.error('Failed to fetch orders:', error);
             message.error('获取订单列表失败');
@@ -106,7 +132,7 @@ const Profile: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [authUser?.id]);
+    }, []);
 
     const fetchReviews = useCallback(async () => {
         if (!authUser?.id) return;
@@ -120,18 +146,59 @@ const Profile: React.FC = () => {
         }
     }, [authUser?.id]);
 
+    const fetchPointsHistory = useCallback(async () => {
+        setPointsLoading(true);
+        try {
+            const data = await getPointsHistory();
+            setPointsHistory(data);
+        } catch (error) {
+            console.error('Failed to fetch points history:', error);
+            message.error('获取积分历史失败');
+        } finally {
+            setPointsLoading(false);
+        }
+    }, []);
+
+    const fetchUserPoints = useCallback(async () => {
+        try {
+            const data = await getUserPoints();
+            setUserPoints(data.points);
+            setSignedInToday(data.signedInToday);
+        } catch (error) {
+            console.error('Failed to fetch user points:', error);
+        }
+    }, []);
+
+    const handleSignIn = async () => {
+        try {
+            const result = await signIn();
+            setUserPoints(prev => prev + result.points);
+            setSignedInToday(true);
+            message.success(result.message);
+            fetchPointsHistory();
+        } catch (error: unknown) {
+            console.error('Failed to sign in:', error);
+            const err = error as { response?: { data?: string } };
+            message.error(err.response?.data || '签到失败');
+        }
+    };
+
     useEffect(() => {
         if (authUser?.id) {
             fetchUserProfile();
+            fetchUserPoints();
         }
-    }, [authUser?.id, fetchUserProfile]);
+    }, [authUser?.id, fetchUserProfile, fetchUserPoints]);
 
     useEffect(() => {
         if (activeSection === 'orders' && authUser?.id) {
             fetchOrders();
             fetchReviews();
         }
-    }, [activeSection, authUser?.id, fetchOrders, fetchReviews]);
+        if (activeSection === 'profile') {
+            fetchPointsHistory();
+        }
+    }, [activeSection, authUser?.id, fetchOrders, fetchReviews, fetchPointsHistory]);
 
     useEffect(() => {
         if (userProfile) {
@@ -508,18 +575,44 @@ const Profile: React.FC = () => {
                             <span className="material-symbols-outlined">lock</span>
                             <span>修改密码</span>
                         </button>
+                        <button 
+                            onClick={() => setActiveSection('favorites')}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeSection === 'favorites' ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary'}`}
+                        >
+                            <span className="material-symbols-outlined">favorite</span>
+                            <span>我的收藏</span>
+                        </button>
+                        <button 
+                            onClick={() => setActiveSection('history')}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeSection === 'history' ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary'}`}
+                        >
+                            <span className="material-symbols-outlined">history</span>
+                            <span>浏览历史</span>
+                        </button>
+                        <button 
+                            onClick={() => setActiveSection('coupons')}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeSection === 'coupons' ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary'}`}
+                        >
+                            <span className="material-symbols-outlined">confirmation_number</span>
+                            <span>我的优惠券</span>
+                        </button>
                     </nav>
 
                     <div className="mt-10 p-4 rounded-xl bg-gradient-to-br from-primary to-blue-700 text-white shadow-lg overflow-hidden relative">
                         <div className="relative z-10">
                             <p className="text-xs font-semibold opacity-80 uppercase tracking-wider">书店会员</p>
-                            <p className="text-lg font-bold mt-1">2,450 积分</p>
+                            <p className="text-lg font-bold mt-1">{userPoints} 积分</p>
                             <p className="text-xs mt-3 opacity-90">积分可抵扣下次购物金额</p>
                             <button
-                                onClick={() => message.info('积分兑换功能暂未开放')}
-                                className="mt-4 w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
+                                onClick={handleSignIn}
+                                disabled={signedInToday}
+                                className={`mt-4 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                    signedInToday 
+                                        ? 'bg-white/10 text-white/60 cursor-not-allowed' 
+                                        : 'bg-white/20 hover:bg-white/30'
+                                }`}
                             >
-                                立即兑换
+                                {signedInToday ? '今日已签到' : '签到领积分'}
                             </button>
                         </div>
                         <span className="material-symbols-outlined absolute -bottom-4 -right-4 text-7xl opacity-20 rotate-12">redeem</span>
@@ -540,7 +633,7 @@ const Profile: React.FC = () => {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
-                                    <span className="material-symbols-outlined absolute left-3 top-2 text-slate-400 text-lg">search</span>
+                                    <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-base">search</span>
                                 </div>
                             </div>
 
@@ -681,6 +774,28 @@ const Profile: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     ))}
+                                                    
+                                                    {/* 订单时间线 */}
+                                                    <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                                        <button
+                                                            onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                                                            className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">
+                                                                {expandedOrderId === order.id ? 'expand_less' : 'expand_more'}
+                                                            </span>
+                                                            {expandedOrderId === order.id ? '收起详情' : '查看物流'}
+                                                        </button>
+                                                        {expandedOrderId === order.id && (
+                                                            <div className="mt-4 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                                                <OrderTimeline 
+                                                                    status={order.status}
+                                                                    createTime={order.createTime}
+                                                                    horizontal
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))
@@ -728,24 +843,24 @@ const Profile: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">用户名</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">badge</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">badge</span>
                                             <input
                                                 type="text"
                                                 value={profileForm.username}
                                                 disabled
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">邮箱地址</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">mail</span>
                                             <input
                                                 type="email"
                                                 value={profileForm.email}
                                                 onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                                 placeholder="请输入邮箱"
                                             />
                                         </div>
@@ -753,12 +868,12 @@ const Profile: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">姓名</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">person</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">person</span>
                                             <input
                                                 type="text"
                                                 value={profileForm.fullName}
                                                 onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                                 placeholder="请输入姓名"
                                             />
                                         </div>
@@ -766,12 +881,12 @@ const Profile: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">手机号</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">phone_iphone</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">phone_iphone</span>
                                             <input
                                                 type="tel"
                                                 value={profileForm.phoneNumber}
                                                 onChange={e => setProfileForm({ ...profileForm, phoneNumber: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                                 placeholder="请输入手机号"
                                             />
                                         </div>
@@ -779,24 +894,24 @@ const Profile: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-500 dark:text-slate-400">用户 ID</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">fingerprint</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">fingerprint</span>
                                             <input
                                                 type="text"
                                                 disabled
                                                 value={userProfile?.id ? `BH-${userProfile.id.toString().padStart(7, '0')}` : '未分配'}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">默认收货地址（来自地址管理）</label>
                                         <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">location_on</span>
+                                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">location_on</span>
                                             <input
                                                 type="text"
                                                 value={addressForm.address}
                                                 disabled
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
+                                                className="w-full pl-11 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 cursor-not-allowed"
                                                 placeholder="请输入默认收货地址"
                                             />
                                         </div>
@@ -812,6 +927,56 @@ const Profile: React.FC = () => {
                                     </button>
                                 </div>
                             </form>
+                            
+                            {/* 积分历史 */}
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">积分明细</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">查看积分获取和消耗记录</p>
+                                </div>
+                                <div className="p-8">
+                                    {pointsLoading ? (
+                                        <div className="flex justify-center items-center h-32">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                        </div>
+                                    ) : pointsHistory.length === 0 ? (
+                                        <div className="text-center py-8 text-slate-500">
+                                            <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">stars</span>
+                                            <p>暂无积分记录</p>
+                                            <p className="text-sm mt-1">签到、购物、评价都可以获得积分</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {pointsHistory.slice(0, 10).map((history) => (
+                                                <div key={history.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                                            history.points > 0 
+                                                                ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
+                                                                : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                        }`}>
+                                                            <span className="material-symbols-outlined text-lg">
+                                                                {history.type === 'SIGN_IN' ? 'event_available' : 
+                                                                 history.type === 'PURCHASE' ? 'shopping_cart' :
+                                                                 history.type === 'REVIEW' ? 'rate_review' :
+                                                                 history.type === 'REGISTER' ? 'person_add' :
+                                                                 history.type === 'DEDUCT' ? 'remove_circle' : 'stars'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-slate-900 dark:text-white">{history.description}</p>
+                                                            <p className="text-xs text-slate-500">{new Date(history.createTime).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`font-bold ${history.points > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {history.points > 0 ? '+' : ''}{history.points}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -1126,9 +1291,44 @@ const Profile: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {activeSection === 'favorites' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的收藏</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您收藏的图书。</p>
+                            </div>
+                            <div className="p-8">
+                                <FavoritesList />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === 'history' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">浏览历史</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">查看您最近浏览过的图书。</p>
+                            </div>
+                            <div className="p-8">
+                                <BrowsingHistoryList />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === 'coupons' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的优惠券</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您的优惠券。</p>
+                            </div>
+                            <div className="p-8">
+                                <CouponsList />
+                            </div>
+                        </div>
+                    )}
                 </section>
             </div>
-
             <ReviewModal 
                 isOpen={isReviewModalOpen} 
                 onClose={() => setIsReviewModalOpen(false)} 

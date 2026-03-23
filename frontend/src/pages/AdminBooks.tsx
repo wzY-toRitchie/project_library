@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import api from '../api';
 import type { Book, Category } from '../types';
 import { message } from 'antd'; // Keeping antd for message toast only
+import { BookGridSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 
 const AdminBooks: React.FC = () => {
     const [books, setBooks] = useState<Book[]>([]);
@@ -35,11 +37,13 @@ const AdminBooks: React.FC = () => {
     const fetchBooks = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/books');
-            setBooks(response.data);
+            const response = await api.get('/books', { params: { size: 100 } });
+            // API 返回分页数据，需要提取 content 字段
+            const data = response.data;
+            setBooks(data.content || data);
         } catch (error) {
             console.error('Failed to fetch books:', error);
-            message.error('获取图书列表失败');
+            message.error('图书数据加载失败，请刷新页面');
         } finally {
             setLoading(false);
         }
@@ -295,13 +299,12 @@ const AdminBooks: React.FC = () => {
                 setImporting(false);
                 return;
             }
-            let successCount = 0;
-            let failCount = 0;
-            for (const raw of items) {
+
+            // 并行处理所有导入请求
+            const promises = items.map(async (raw) => {
                 const payload = toPayload(raw);
                 if (!payload.title || !payload.author) {
-                    failCount += 1;
-                    continue;
+                    return { success: false };
                 }
                 try {
                     if (payload.id) {
@@ -309,11 +312,15 @@ const AdminBooks: React.FC = () => {
                     } else {
                         await api.post('/books', payload);
                     }
-                    successCount += 1;
+                    return { success: true };
                 } catch {
-                    failCount += 1;
+                    return { success: false };
                 }
-            }
+            });
+
+            const results = await Promise.all(promises);
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
             if (successCount > 0) {
                 message.success(`导入完成：成功 ${successCount} 条，失败 ${failCount} 条`);
                 fetchBooks();
@@ -352,9 +359,9 @@ const AdminBooks: React.FC = () => {
             {/* Action Bar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
                     <input 
-                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow" 
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow" 
                         placeholder="搜索书名或作者..." 
                         type="text"
                         value={searchQuery}
@@ -451,11 +458,22 @@ const AdminBooks: React.FC = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">加载中...</td>
+                                    <td colSpan={7} className="px-6 py-8">
+                                        <div className="flex justify-center">
+                                            <BookGridSkeleton count={4} />
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : filteredBooks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">暂无图书</td>
+                                    <td colSpan={7}>
+                                        <EmptyState
+                                            icon="book"
+                                            title="暂无图书数据"
+                                            description="还没有添加任何图书，点击上方按钮开始添加"
+                                            action={{ label: '添加图书', onClick: () => { setEditingBook(null); setForm({ title: '', author: '', price: '', stock: '', description: '', categoryId: '', coverImage: '' }); setPreviewImage(''); setModalOpen(true); } }}
+                                        />
+                                    </td>
                                 </tr>
                             ) : (
                                 filteredBooks.map((book) => (

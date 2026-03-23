@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
+import { checkFavorite, toggleFavorite } from '../api/favorites';
+import { recordBrowsing } from '../api/history';
 import type { Book, Review } from '../types';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +16,8 @@ const BookDetail: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'description' | 'reviews'>('description');
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
+    const [isFavorited, setIsFavorited] = useState(false);
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
     const { addToCart } = useCart();
     const { isAuthenticated } = useAuth();
 
@@ -28,7 +32,7 @@ const BookDetail: React.FC = () => {
                 setReviews(reviewsRes.data);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
-                message.error('获取图书详情失败');
+                message.error('图书信息加载失败，请返回重试');
             } finally {
                 setLoading(false);
             }
@@ -39,6 +43,35 @@ const BookDetail: React.FC = () => {
     useEffect(() => {
         setQuantity(1);
     }, [book?.id]);
+
+    // 检查收藏状态
+    useEffect(() => {
+        const checkFavoriteStatus = async () => {
+            if (!isAuthenticated || !id) return;
+            try {
+                const favorited = await checkFavorite(Number(id));
+                setIsFavorited(favorited);
+            } catch (error) {
+                console.error('Failed to check favorite status:', error);
+            }
+        };
+        checkFavoriteStatus();
+    }, [id, isAuthenticated]);
+
+    // 记录浏览历史（只记录一次）
+    const hasRecordedRef = useRef(false);
+    useEffect(() => {
+        const recordView = async () => {
+            if (!isAuthenticated || !id || hasRecordedRef.current) return;
+            hasRecordedRef.current = true;
+            try {
+                await recordBrowsing(Number(id));
+            } catch (error) {
+                console.error('Failed to record browsing:', error);
+            }
+        };
+        recordView();
+    }, [id, isAuthenticated]);
 
     const handleAddToCart = () => {
         if (book) {
@@ -71,6 +104,27 @@ const BookDetail: React.FC = () => {
                 totalPrice: book.price * quantity
             }
         });
+    };
+
+    const handleToggleFavorite = async () => {
+        if (!isAuthenticated) {
+            message.warning('请先登录后再收藏');
+            navigate('/login');
+            return;
+        }
+        if (!book || favoriteLoading) return;
+        
+        setFavoriteLoading(true);
+        try {
+            const newStatus = await toggleFavorite(book.id);
+            setIsFavorited(newStatus);
+            message.success(newStatus ? '已添加到收藏' : '已取消收藏');
+        } catch (error) {
+            console.error('Failed to toggle favorite:', error);
+            message.error('操作失败，请重试');
+        } finally {
+            setFavoriteLoading(false);
+        }
     };
 
     const reviewsCount = reviews.length;
@@ -206,13 +260,28 @@ const BookDetail: React.FC = () => {
                                     立即购买
                                 </button>
                             </div>
-                            <button
-                                className="w-full h-12 border-2 border-primary/20 text-primary hover:bg-primary/5 font-bold rounded-lg transition-all flex items-center justify-center gap-2"
-                                onClick={handleAddToCart}
-                            >
-                                <span className="material-symbols-outlined">add_shopping_cart</span>
-                                加入购物车
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    className="flex-1 h-12 border-2 border-primary/20 text-primary hover:bg-primary/5 font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                                    onClick={handleAddToCart}
+                                >
+                                    <span className="material-symbols-outlined">add_shopping_cart</span>
+                                    加入购物车
+                                </button>
+                                <button
+                                    className={`h-12 px-4 border-2 rounded-lg transition-all flex items-center justify-center ${
+                                        isFavorited 
+                                            ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' 
+                                            : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                                    }`}
+                                    onClick={handleToggleFavorite}
+                                    disabled={favoriteLoading}
+                                >
+                                    <span className="material-symbols-outlined">
+                                        {isFavorited ? 'favorite' : 'favorite_border'}
+                                    </span>
+                                </button>
+                            </div>
                             <p className="mt-4 text-[10px] text-center text-slate-400">满 199 元免运费，支持 30 天无忧退换。</p>
                         </div>
                     </div>
