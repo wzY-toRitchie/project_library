@@ -17,6 +17,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Boolean existsByEmail(String email);
     
+    // OAuth2 相关查询
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
+    
+    Boolean existsByProviderAndProviderId(String provider, String providerId);
+    
     // 获取每日用户注册数据
     @Query("SELECT DATE(u.createTime), COUNT(u) FROM User u WHERE u.createTime >= :start AND u.createTime < :end GROUP BY DATE(u.createTime) ORDER BY DATE(u.createTime)")
     List<Object[]> getDailyRegistrations(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

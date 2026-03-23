@@ -19,7 +19,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @JsonIgnore
     private String password;
 
@@ -35,6 +35,15 @@ public class User {
     private String address;
 
     private String role; // USER, ADMIN
+
+    @Column(name = "provider")
+    private String provider = "local"; // github, google, gitee, xiaomi, local
+
+    @Column(name = "provider_id")
+    private String providerId;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
 
     @Column(nullable = false)
     private Integer points = 0;
