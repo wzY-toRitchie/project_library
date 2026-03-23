@@ -21,6 +21,7 @@ import Checkout from './pages/Checkout';
 import ContactSupport from './pages/ContactSupport';
 import SearchResults from './pages/SearchResults';
 import NotFound from './pages/NotFound';
+import OAuthCallback from './pages/OAuthCallback';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
@@ -57,6 +58,7 @@ function App() {
                 <Route path="/payment/:id" element={<Payment />} />
                 <Route path="/contact" element={<ContactSupport />} />
                 <Route path="/search" element={<SearchResults />} />
+                <Route path="/oauth/callback" element={<OAuthCallback />} />
               </Route>
 
               {/* Admin Interface Routes */}

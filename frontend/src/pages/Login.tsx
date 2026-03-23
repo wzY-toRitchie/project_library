@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import OAuth2Buttons from '../components/OAuth2Buttons';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -191,6 +192,8 @@ const Login: React.FC = () => {
                             ) : '登录'}
                         </button>
                     </form>
+
+                    <OAuth2Buttons />
 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-ink-light dark:text-slate-400 font-body">
