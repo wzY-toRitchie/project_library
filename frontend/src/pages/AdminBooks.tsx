@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import api from '../api';
 import type { Book, Category } from '../types';
 import { message } from 'antd'; // Keeping antd for message toast only
@@ -23,7 +23,8 @@ const AdminBooks: React.FC = () => {
         stock: '',
         description: '',
         categoryId: '',
-        coverImage: ''
+        coverImage: '',
+        featured: false
     });
     const importInputRef = useRef<HTMLInputElement | null>(null);
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -91,7 +92,8 @@ const AdminBooks: React.FC = () => {
             stock: '',
             description: '',
             categoryId: '',
-            coverImage: ''
+            coverImage: '',
+            featured: false
         });
         setModalOpen(true);
     };
@@ -105,7 +107,8 @@ const AdminBooks: React.FC = () => {
             stock: book.stock?.toString() || '',
             description: book.description || '',
             categoryId: book.category?.id?.toString() || '',
-            coverImage: book.coverImage || ''
+            coverImage: book.coverImage || '',
+            featured: book.featured || false
         });
         setModalOpen(true);
     };
@@ -176,7 +179,8 @@ const AdminBooks: React.FC = () => {
             stock: stockValue,
             description: bookForm.description.trim(),
             coverImage: bookForm.coverImage.trim(),
-            category: bookForm.categoryId ? { id: Number(bookForm.categoryId) } : null
+            category: bookForm.categoryId ? { id: Number(bookForm.categoryId) } : null,
+            featured: bookForm.featured
         };
         try {
             if (editingBook) {
@@ -338,7 +342,7 @@ const AdminBooks: React.FC = () => {
         }
     };
 
-    const filteredBooks = books.filter(book => {
+    const filteredBooks = useMemo(() => books.filter(book => {
         const matchesQuery =
             book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             book.author.toLowerCase().includes(searchQuery.toLowerCase());
@@ -346,31 +350,32 @@ const AdminBooks: React.FC = () => {
         if (filterMode === 'low') return book.stock > 0 && book.stock <= lowStockThreshold;
         if (filterMode === 'out') return book.stock === 0;
         return true;
-    });
+    }), [books, searchQuery, filterMode, lowStockThreshold]);
 
     // Calculate stats
-    const totalBooks = books.length;
-    const inStock = books.filter(b => b.stock > 0).length;
-    const lowStock = books.filter(b => b.stock > 0 && b.stock <= lowStockThreshold).length;
-    const outOfStock = books.filter(b => b.stock === 0).length;
+    const totalBooks = useMemo(() => books.length, [books]);
+    const inStock = useMemo(() => books.filter(b => b.stock > 0).length, [books]);
+    const lowStock = useMemo(() => books.filter(b => b.stock > 0 && b.stock <= lowStockThreshold).length, [books, lowStockThreshold]);
+    const outOfStock = useMemo(() => books.filter(b => b.stock === 0).length, [books]);
 
     return (
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
             {/* Action Bar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
-                    <input 
-                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow" 
-                        placeholder="搜索书名或作者..." 
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined" aria-hidden="true">search</span>
+                    <input
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        placeholder="搜索书名或作者..."
                         type="text"
+                        aria-label="搜索书名或作者"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <div className="flex gap-3">
                     <button
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
                         onClick={() => {
                             const next = filterMode === 'all' ? 'low' : filterMode === 'low' ? 'out' : 'all';
                             setFilterMode(next);
@@ -379,22 +384,22 @@ const AdminBooks: React.FC = () => {
                             else message.info('已显示：全部图书');
                         }}
                     >
-                        <span className="material-symbols-outlined text-[20px]">filter_list</span>
+                        <span className="material-symbols-outlined text-[20px]" aria-hidden="true">filter_list</span>
                         {filterMode === 'all' ? '筛选：全部' : filterMode === 'low' ? `筛选：库存≤${lowStockThreshold}` : '筛选：已售罄'}
                     </button>
                     <button
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-60"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-60"
                         onClick={() => importInputRef.current?.click()}
                         disabled={importing}
                     >
-                        <span className="material-symbols-outlined text-[20px]">upload</span>
-                        {importing ? '导入中...' : '批量导入'}
+                        <span className="material-symbols-outlined text-[20px]" aria-hidden="true">upload</span>
+                        {importing ? '导入中…' : '批量导入'}
                     </button>
                     <button 
-                        className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 transition-colors,transition-transform active:scale-95"
                         onClick={openCreate}
                     >
-                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        <span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>
                         添加新书
                     </button>
                 </div>
@@ -402,36 +407,36 @@ const AdminBooks: React.FC = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined fill">library_books</span>
+                        <span className="material-symbols-outlined fill" aria-hidden="true">library_books</span>
                     </div>
                     <div>
                         <p className="text-xs text-slate-500 font-medium">图书总数</p>
                         <p className="text-lg font-bold text-slate-900 dark:text-white">{totalBooks}</p>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined fill">check_circle</span>
+                        <span className="material-symbols-outlined fill" aria-hidden="true">check_circle</span>
                     </div>
                     <div>
                         <p className="text-xs text-slate-500 font-medium">库存充足</p>
                         <p className="text-lg font-bold text-slate-900 dark:text-white">{inStock}</p>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined fill">warning</span>
+                        <span className="material-symbols-outlined fill" aria-hidden="true">warning</span>
                     </div>
                     <div>
                         <p className="text-xs text-slate-500 font-medium">库存紧张 (≤{lowStockThreshold})</p>
                         <p className="text-lg font-bold text-slate-900 dark:text-white">{lowStock}</p>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined fill">error</span>
+                        <span className="material-symbols-outlined fill" aria-hidden="true">error</span>
                     </div>
                     <div>
                         <p className="text-xs text-slate-500 font-medium">已售罄</p>
@@ -441,7 +446,7 @@ const AdminBooks: React.FC = () => {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -452,13 +457,14 @@ const AdminBooks: React.FC = () => {
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">分类</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">价格</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">库存</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">编辑精选</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-8">
+                                    <td colSpan={8} className="px-6 py-8">
                                         <div className="flex justify-center">
                                             <BookGridSkeleton count={4} />
                                         </div>
@@ -466,12 +472,12 @@ const AdminBooks: React.FC = () => {
                                 </tr>
                             ) : filteredBooks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7}>
+                                    <td colSpan={8}>
                                         <EmptyState
                                             icon="book"
                                             title="暂无图书数据"
                                             description="还没有添加任何图书，点击上方按钮开始添加"
-                                            action={{ label: '添加图书', onClick: () => { setEditingBook(null); setForm({ title: '', author: '', price: '', stock: '', description: '', categoryId: '', coverImage: '' }); setPreviewImage(''); setModalOpen(true); } }}
+                                            action={{ label: '添加图书', onClick: openCreate }}
                                         />
                                     </td>
                                 </tr>
@@ -516,21 +522,41 @@ const AdminBooks: React.FC = () => {
                                                 </span>
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await api.put(`/books/${book.id}`, { ...book, featured: !book.featured });
+                                                        message.success(book.featured ? '已取消精选' : '已设为精选');
+                                                        fetchBooks();
+                                                    } catch (e) {
+                                                        message.error('操作失败');
+                                                    }
+                                                }}
+                                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                                    book.featured ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {book.featured ? '精选 ✓' : '普通'}
+                                            </button>
+                                        </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     className="p-1.5 text-slate-500 hover:text-primary hover:bg-blue-50 dark:hover:bg-slate-700 rounded transition-colors"
                                                     title="Edit"
                                                     onClick={() => openEdit(book)}
+                                                    aria-label="编辑"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">edit</span>
                                                 </button>
                                                 <button 
                                                     className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded transition-colors" 
                                                     title="Delete"
                                                     onClick={() => handleDelete(book.id)}
+                                                    aria-label="删除"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -555,58 +581,70 @@ const AdminBooks: React.FC = () => {
             />
             {modalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="w-full max-w-3xl bg-white dark:bg-[#1a2632] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+                    <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{editingBook ? '编辑图书' : '新增图书'}</h3>
                             <button
                                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                                 onClick={closeModal}
+                                aria-label="关闭"
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <span className="material-symbols-outlined" aria-hidden="true">close</span>
                             </button>
                         </div>
                         <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">书名</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-title">书名</label>
                                 <input
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    id="book-title"
+                                    name="title"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.title}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, title: e.target.value }))}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">作者</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-author">作者</label>
                                 <input
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    id="book-author"
+                                    name="author"
+                                    spellCheck={false}
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.author}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, author: e.target.value }))}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">价格</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-price">价格</label>
                                 <input
+                                    id="book-price"
+                                    name="price"
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.price}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, price: e.target.value }))}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">库存</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-stock">库存</label>
                                 <input
+                                    id="book-stock"
+                                    name="stock"
                                     type="number"
                                     min="0"
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.stock}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, stock: e.target.value }))}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">分类</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-category">分类</label>
                                 <select
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    id="book-category"
+                                    name="categoryId"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.categoryId}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, categoryId: e.target.value }))}
                                 >
@@ -619,9 +657,11 @@ const AdminBooks: React.FC = () => {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">封面链接</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-coverImage">封面链接</label>
                                 <input
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                                    id="book-coverImage"
+                                    name="coverImage"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                     value={bookForm.coverImage}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, coverImage: e.target.value }))}
                                 />
@@ -640,17 +680,29 @@ const AdminBooks: React.FC = () => {
                                 </div>
                                 {bookForm.coverImage && (
                                     <div className="w-20 h-28 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100">
-                                        <img src={bookForm.coverImage} alt="cover" className="w-full h-full object-cover" />
+                                        <img src={bookForm.coverImage} alt="cover" className="w-full h-full object-cover" width={80} height={112} />
                                     </div>
                                 )}
                             </div>
                             <div className="md:col-span-2 flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">图书简介</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-200" htmlFor="book-description">图书简介</label>
                                 <textarea
-                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-[#111827] text-slate-900 dark:text-white min-h-[120px]"
+                                    id="book-description"
+                                    name="description"
+                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[120px]"
                                     value={bookForm.description}
                                     onChange={(e) => setBookForm(prev => ({ ...prev, description: e.target.value }))}
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">编辑精选</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setBookForm(p => ({ ...p, featured: !p.featured }))}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${bookForm.featured ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                                >
+                                    {bookForm.featured ? '已开启' : '未开启'}
+                                </button>
                             </div>
                         </div>
                         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
@@ -666,7 +718,7 @@ const AdminBooks: React.FC = () => {
                                 onClick={saveBook}
                                 disabled={saving}
                             >
-                                {saving ? '保存中...' : '保存'}
+                                {saving ? '保存中…' : '保存'}
                             </button>
                         </div>
                     </div>

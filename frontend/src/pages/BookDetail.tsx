@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
@@ -7,6 +7,8 @@ import { recordBrowsing } from '../api/history';
 import type { Book, Review } from '../types';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import RelatedBooks from '../components/RelatedBooks';
+import { FALLBACK_COVER } from '../utils/constants';
 
 const BookDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -18,6 +20,7 @@ const BookDetail: React.FC = () => {
     const [quantity, setQuantity] = useState(1);
     const [isFavorited, setIsFavorited] = useState(false);
     const [favoriteLoading, setFavoriteLoading] = useState(false);
+    const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart } = useCart();
     const { isAuthenticated } = useAuth();
 
@@ -73,37 +76,46 @@ const BookDetail: React.FC = () => {
         recordView();
     }, [id, isAuthenticated]);
 
-    const handleAddToCart = () => {
-        if (book) {
+    const handleAddToCart = async () => {
+        if (!book || addingToCart) return;
+        setAddingToCart(true);
+        try {
             for (let i = 0; i < quantity; i += 1) {
                 addToCart(book);
             }
             message.success(`已加入购物车 x${quantity}`);
+        } finally {
+            setAddingToCart(false);
         }
     };
 
-    const handleBuyNow = () => {
+    const handleBuyNow = async () => {
         if (!book) return;
         if (!isAuthenticated) {
             message.warning('请先登录后再购买');
             navigate('/login');
             return;
         }
-        navigate('/checkout', {
-            state: {
-                items: [
-                    {
-                        id: book.id,
-                        title: book.title,
-                        author: book.author,
-                        price: book.price,
-                        quantity,
-                        coverImage: book.coverImage
-                    }
-                ],
-                totalPrice: book.price * quantity
-            }
-        });
+        setAddingToCart(true);
+        try {
+            navigate('/checkout', {
+                state: {
+                    items: [
+                        {
+                            id: book.id,
+                            title: book.title,
+                            author: book.author,
+                            price: book.price,
+                            quantity,
+                            coverImage: book.coverImage
+                        }
+                    ],
+                    totalPrice: book.price * quantity
+                }
+            });
+        } finally {
+            setAddingToCart(false);
+        }
     };
 
     const handleToggleFavorite = async () => {
@@ -134,7 +146,7 @@ const BookDetail: React.FC = () => {
     const ratingValue = Math.max(0, Math.min(5, Math.round(averageRating)));
     const ratingText = averageRating.toFixed(1);
 
-    const isbnText = book?.id ? `BK-${book.id.toString().padStart(10, '0')}` : '暂无';
+    const isbnText = book?.isbn || '';
     const stockText = book?.stock ?? 0;
     const authorText = book?.author || '未知作者';
     const descriptionText = book?.description || '暂无图书简介。';
@@ -147,7 +159,7 @@ const BookDetail: React.FC = () => {
     const handleDecrease = () => setQuantity(prev => Math.max(1, prev - 1));
     const coverImage =
         book?.coverImage ||
-        'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=600&h=800';
+        FALLBACK_COVER;
 
     if (loading) {
         return (
@@ -159,7 +171,7 @@ const BookDetail: React.FC = () => {
     if (!book) {
         return (
             <div className="flex flex-col items-center justify-center py-24 text-slate-500">
-                <span className="material-symbols-outlined text-4xl mb-3">menu_book</span>
+                <span className="material-symbols-outlined text-4xl mb-3" aria-hidden="true">menu_book</span>
                 <p>未找到该图书</p>
             </div>
         );
@@ -176,11 +188,11 @@ const BookDetail: React.FC = () => {
                             </button>
                         </li>
                         <li>
-                            <span className="material-symbols-outlined text-xs">chevron_right</span>
+                            <span className="material-symbols-outlined text-xs" aria-hidden="true">chevron_right</span>
                         </li>
                         <li className="font-medium text-slate-900 dark:text-white">{categoryText}</li>
                         <li>
-                            <span className="material-symbols-outlined text-xs">chevron_right</span>
+                            <span className="material-symbols-outlined text-xs" aria-hidden="true">chevron_right</span>
                         </li>
                         <li className="font-medium text-slate-900 dark:text-white line-clamp-1 max-w-[260px]">{book.title}</li>
                     </ol>
@@ -189,7 +201,7 @@ const BookDetail: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-16 mb-16">
                     <div className="md:col-span-5 lg:col-span-4">
                         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
-                            <img alt={book.title} className="w-full h-auto rounded-lg shadow-md object-cover aspect-[3/4]" src={coverImage} />
+                            <img alt={book.title} className="w-full h-auto rounded-lg shadow-md object-cover aspect-[3/4]" src={coverImage} width={300} height={400} />
                         </div>
                     </div>
                     <div className="md:col-span-7 lg:col-span-8 flex flex-col">
@@ -203,18 +215,19 @@ const BookDetail: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-4 mb-8">
                             <div className="flex text-amber-400">
                                 {[1, 2, 3, 4, 5].map((star) => (
-                                    <span key={star} className="material-symbols-outlined text-sm">
+                                    <span key={star} className="material-symbols-outlined text-sm" aria-hidden="true">
                                         {star <= ratingValue ? 'star' : 'star_outline'}
                                     </span>
                                 ))}
                             </div>
                             <span className="text-sm font-medium text-slate-500">({reviewsCount} 条评价)</span>
-                            <span className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
-                            <span className="text-sm font-mono text-slate-500">编号：{isbnText}</span>
+                            {isbnText && <><span className="h-4 w-px bg-slate-300 dark:bg-slate-700" /><span className="text-sm font-mono text-slate-500">ISBN：{isbnText}</span></>}
                         </div>
                         <div className="mb-8 flex items-baseline gap-4">
                             <span className="text-4xl font-bold text-primary">¥{book.price.toFixed(2)}</span>
-                            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold">热销中</span>
+                            {averageRating >= 4.5 && (
+                                <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-1 rounded text-xs font-bold">热销</span>
+                            )}
                         </div>
                         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-lg">
                             <div className="flex items-center justify-between mb-6">
@@ -223,7 +236,7 @@ const BookDetail: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className={`flex h-2 w-2 rounded-full ${stockText > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                         <span className={`text-sm font-semibold ${stockText > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                                            {stockText > 0 ? `库存充足：${stockText} 本` : '暂时缺货'}
+                                            {stockText > 0 ? `库存充足 ${stockText} 本` : '暂时缺货'}
                                         </span>
                                     </div>
                                 </div>
@@ -239,50 +252,67 @@ const BookDetail: React.FC = () => {
                                         onClick={handleDecrease}
                                         type="button"
                                         disabled={!canDecrease}
+                                        aria-label="减少数量"
                                     >
-                                        <span className="material-symbols-outlined text-lg">remove</span>
+                                        <span className="material-symbols-outlined text-lg" aria-hidden="true">remove</span>
                                     </button>
-                                    <input className="w-12 text-center border-none focus:ring-0 bg-transparent font-medium text-slate-900 dark:text-white" readOnly type="number" value={quantity} />
+                                    <input className="w-12 text-center border-none focus:ring-0 bg-transparent font-medium text-slate-900 dark:text-white" readOnly type="number" name="quantity" value={quantity} />
                                     <button
                                         className={`px-3 transition-colors ${canIncrease ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'}`}
                                         onClick={handleIncrease}
                                         type="button"
                                         disabled={!canIncrease}
+                                        aria-label="增加数量"
                                     >
-                                        <span className="material-symbols-outlined text-lg">add</span>
+                                        <span className="material-symbols-outlined text-lg" aria-hidden="true">add</span>
                                     </button>
                                 </div>
                                 <button
-                                    className="flex-1 min-w-[200px] h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-all shadow-md flex items-center justify-center gap-2"
+                                    className="flex-1 min-w-[200px] h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
                                     onClick={handleBuyNow}
+                                    disabled={addingToCart}
                                 >
-                                    <span className="material-symbols-outlined">shopping_bag</span>
-                                    立即购买
+                                    {addingToCart ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+                                            立即购买
+                                        </>
+                                    )}
                                 </button>
                             </div>
                             <div className="flex gap-3">
                                 <button
-                                    className="flex-1 h-12 border-2 border-primary/20 text-primary hover:bg-primary/5 font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 h-12 border-2 border-primary/20 text-primary hover:bg-primary/5 font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                                     onClick={handleAddToCart}
+                                    disabled={addingToCart}
                                 >
-                                    <span className="material-symbols-outlined">add_shopping_cart</span>
-                                    加入购物车
+                                    {addingToCart ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined" aria-hidden="true">add_shopping_cart</span>
+                                            加入购物车
+                                        </>
+                                    )}
                                 </button>
                                 <button
-                                    className={`h-12 px-4 border-2 rounded-lg transition-all flex items-center justify-center ${
-                                        isFavorited 
-                                            ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' 
+                                    className={`h-12 px-4 border-2 rounded-lg transition-colors flex items-center justify-center ${
+                                        isFavorited
+                                            ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
                                             : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
                                     }`}
                                     onClick={handleToggleFavorite}
                                     disabled={favoriteLoading}
+                                    aria-label="收藏"
                                 >
-                                    <span className="material-symbols-outlined">
+                                    <span className="material-symbols-outlined" aria-hidden="true">
                                         {isFavorited ? 'favorite' : 'favorite_border'}
                                     </span>
                                 </button>
                             </div>
-                            <p className="mt-4 text-[10px] text-center text-slate-400">满 199 元免运费，支持 30 天无忧退换。</p>
+                            <p className="mt-4 text-xs text-center text-slate-400">满199 元免运费，支持30 天无忧退换。</p>
                         </div>
                     </div>
                 </div>
@@ -294,24 +324,19 @@ const BookDetail: React.FC = () => {
                             className={`pb-4 text-sm font-bold border-b-2 transition-colors tracking-wide ${activeTab === 'description' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`} 
                             type="button"
                         >
-                            图书简介
-                        </button>
+                            图书简介                        </button>
                         <button 
                             onClick={() => setActiveTab('reviews')}
                             className={`pb-4 text-sm font-bold border-b-2 transition-colors tracking-wide ${activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`} 
                             type="button"
                         >
-                            用户评价（{reviewsCount}）
-                        </button>
+                            用户评价（{reviewsCount}）                        </button>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2 space-y-6">
                             {activeTab === 'description' ? (
                                 <>
                                     <div className="prose dark:prose-invert max-w-none">
-                                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-lg italic">
-                                            “一本充满张力与希望的作品，值得细细品读。”
-                                        </p>
                                         <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{descriptionText}</p>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-6">
@@ -319,14 +344,30 @@ const BookDetail: React.FC = () => {
                                             <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">作者</span>
                                             <span className="text-slate-900 dark:text-white font-medium">{authorText}</span>
                                         </div>
-                                        <div>
-                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">库存</span>
-                                            <span className="text-slate-900 dark:text-white font-medium">{stockText} 本</span>
-                                        </div>
-                                        <div>
-                                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">分类</span>
-                                            <span className="text-slate-900 dark:text-white font-medium">{categoryText}</span>
-                                        </div>
+                                        {book.publisher && (
+                                            <div>
+                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">出版社</span>
+                                                <span className="text-slate-900 dark:text-white font-medium">{book.publisher}</span>
+                                            </div>
+                                        )}
+                                        {book.publishDate && (
+                                            <div>
+                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">出版日期</span>
+                                                <span className="text-slate-900 dark:text-white font-medium">{book.publishDate}</span>
+                                            </div>
+                                        )}
+                                        {book.pages && (
+                                            <div>
+                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">页数</span>
+                                                <span className="text-slate-900 dark:text-white font-medium">{book.pages} 页</span>
+                                            </div>
+                                        )}
+                                        {isbnText && (
+                                            <div>
+                                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">ISBN</span>
+                                                <span className="text-slate-900 dark:text-white font-medium font-mono">{isbnText}</span>
+                                            </div>
+                                        )}
                                         <div>
                                             <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">评分</span>
                                             <span className="text-slate-900 dark:text-white font-medium">{ratingText} / 5</span>
@@ -337,7 +378,7 @@ const BookDetail: React.FC = () => {
                                 <div className="space-y-6">
                                     {reviews.length === 0 ? (
                                         <div className="text-center py-10 text-slate-500">
-                                            <span className="material-symbols-outlined text-4xl mb-2">rate_review</span>
+                                            <span className="material-symbols-outlined text-4xl mb-2" aria-hidden="true">rate_review</span>
                                             <p>暂无评价，快来抢沙发吧！</p>
                                         </div>
                                     ) : (
@@ -354,7 +395,7 @@ const BookDetail: React.FC = () => {
                                                 </div>
                                                 <div className="flex text-amber-400 mb-2 ml-10">
                                                     {[1, 2, 3, 4, 5].map((star) => (
-                                                        <span key={star} className="material-symbols-outlined text-sm">
+                                                        <span key={star} className="material-symbols-outlined text-sm" aria-hidden="true">
                                                             {star <= review.rating ? 'star' : 'star_outline'}
                                                         </span>
                                                     ))}
@@ -374,7 +415,7 @@ const BookDetail: React.FC = () => {
                                     <div className="flex flex-col">
                                         <div className="flex text-amber-400">
                                             {[1, 2, 3, 4, 5].map((star) => (
-                                                <span key={star} className="material-symbols-outlined text-sm">
+                                                <span key={star} className="material-symbols-outlined text-sm" aria-hidden="true">
                                                     {star <= ratingValue ? 'star' : 'star_outline'}
                                                 </span>
                                             ))}
@@ -387,11 +428,11 @@ const BookDetail: React.FC = () => {
                                         <div key={review.id} className="border-b border-slate-100 dark:border-slate-800 pb-4 last:border-0">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-sm font-bold">{review.user?.username || '匿名用户'}</span>
-                                                <span className="text-[10px] text-slate-400 font-medium">{new Date(review.createTime).toLocaleDateString()}</span>
+                                                <span className="text-xs text-slate-400 font-medium">{new Date(review.createTime).toLocaleDateString()}</span>
                                             </div>
                                             <div className="flex text-amber-400 mb-1">
                                                 {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span key={star} className="material-symbols-outlined text-xs">
+                                                    <span key={star} className="material-symbols-outlined text-xs" aria-hidden="true">
                                                         {star <= review.rating ? 'star' : 'star_outline'}
                                                     </span>
                                                 ))}
@@ -411,6 +452,9 @@ const BookDetail: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Related Books */}
+                <RelatedBooks currentBookId={book.id} categoryText={categoryText} />
             </main>
         </div>
     );

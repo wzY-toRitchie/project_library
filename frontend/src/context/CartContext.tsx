@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types';
 import api from '../api';
 import { useAuth } from './AuthContext';
@@ -38,13 +38,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isAuthenticated) return;
         try {
             const response = await api.get('/cart');
-            const backendItems = response.data.map((item: any) => ({
+            const backendItems = response.data.map((item: { book: CartItem; quantity: number }) => ({
                 ...item.book,
                 quantity: item.quantity
             }));
             setCartItems(backendItems);
-        } catch (error) {
-            console.error('Failed to sync cart:', error);
+        } catch (error: any) {
+            if (error?.response?.status === 400 || error?.response?.status === 401) {
+                // Token expired or invalid - clear cart silently
+                setCartItems([]);
+            } else {
+                console.error('Failed to sync cart:', error);
+            }
         }
     }, [isAuthenticated]);
 
@@ -146,8 +151,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+    const totalPrice = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);
+    const cartCount = useMemo(() => cartItems.reduce((count, item) => count + item.quantity, 0), [cartItems]);
 
     return (
         <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, totalPrice, cartCount, syncCart }}>

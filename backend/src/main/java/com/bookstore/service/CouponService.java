@@ -36,6 +36,13 @@ public class CouponService {
     }
 
     /**
+     * 获取所有优惠券（管理员用）
+     */
+    public List<Coupon> getAllCoupons() {
+        return couponRepository.findAll();
+    }
+
+    /**
      * 获取用户优惠券
      */
     public List<UserCoupon> getUserCoupons(Long userId) {

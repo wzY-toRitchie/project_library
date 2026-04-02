@@ -3,7 +3,7 @@ import React from 'react';
 // 图书卡片骨架屏
 export const BookCardSkeleton: React.FC = () => (
     <div className="card-elegant overflow-hidden">
-        <div className="aspect-[3/4] skeleton-shimmer" />
+        <div className="aspect-[2/3] skeleton-shimmer" />
         <div className="p-4">
             <div className="h-5 skeleton-shimmer rounded mb-2 w-3/4" />
             <div className="h-4 skeleton-shimmer rounded mb-3 w-1/2" />

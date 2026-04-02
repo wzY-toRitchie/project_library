@@ -3,7 +3,7 @@ import api from '../api';
 import { message, Modal } from 'antd';
 import { useAuth } from '../context/AuthContext';
 import { UserRowSkeleton } from '../components/Skeleton';
-import EmptyState, { TableEmpty } from '../components/EmptyState';
+import { TableEmpty } from '../components/EmptyState';
 
 interface User {
     id: number;
@@ -127,11 +127,12 @@ const AdminUsers: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined" aria-hidden="true">search</span>
                     <input
-                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索用户名、邮箱或手机号..."
                         type="text"
+                        aria-label="搜索用户"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -144,7 +145,7 @@ const AdminUsers: React.FC = () => {
                             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                                 roleFilter === role
                                     ? 'bg-primary text-white border-primary'
-                                    : 'bg-white dark:bg-[#1a2632] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                         >
                             {role === 'all' ? '全部' : role === 'ADMIN' ? '管理员' : '普通用户'}
@@ -153,7 +154,7 @@ const AdminUsers: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>

@@ -52,6 +52,9 @@ public class Book {
     @Version
     private Integer version;
 
+    @Column(nullable = false)
+    private Boolean featured = false;
+
     @PrePersist
     protected void onCreate() {
         createTime = LocalDateTime.now();

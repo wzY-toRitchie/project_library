@@ -34,10 +34,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-oauth2-client</artifactId>
-		</dependency>
 
 		<dependency>
 			<groupId>com.mysql</groupId>
@@ -80,6 +76,10 @@
 			<version>0.11.5</version>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- Alipay SDK -->
+		<!-- 使用手动实现API调用，无需SDK依赖 -->
+		<!-- 如需使用官方SDK，需配置支付宝Maven仓库 -->
 	</dependencies>
 
 	<build>

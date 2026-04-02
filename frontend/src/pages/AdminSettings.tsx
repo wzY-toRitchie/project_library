@@ -8,6 +8,12 @@ interface AdminSettingsState {
     supportPhone: string;
     lowStockThreshold: number;
     dashboardRange: '6m' | '12m';
+    aiApiKey: string;
+    aiModel: string;
+    aiBaseUrl: string;
+    aiTemperature: number;
+    aiMaxTokens: number;
+    aiMock: boolean;
 }
 
 const defaultSettings: AdminSettingsState = {
@@ -15,13 +21,20 @@ const defaultSettings: AdminSettingsState = {
     supportEmail: 'support@javabooks.com',
     supportPhone: '400-123-4567',
     lowStockThreshold: 10,
-    dashboardRange: '6m'
+    dashboardRange: '6m',
+    aiApiKey: '',
+    aiModel: 'openrouter/free',
+    aiBaseUrl: 'https://openrouter.ai/api/v1',
+    aiTemperature: 0.7,
+    aiMaxTokens: 2000,
+    aiMock: false,
 };
 
 const AdminSettings: React.FC = () => {
     const [settings, setSettings] = useState<AdminSettingsState>(defaultSettings);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -71,12 +84,12 @@ const AdminSettings: React.FC = () => {
 
     return (
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
-            <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 flex flex-col gap-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 flex flex-col gap-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">店铺名称</label>
                         <input
-                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                             name="storeName"
                             data-testid="store-name-input"
                             value={settings.storeName}
@@ -87,7 +100,7 @@ const AdminSettings: React.FC = () => {
                     <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">客服邮箱</label>
                         <input
-                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                             name="supportEmail"
                             data-testid="support-email-input"
                             value={settings.supportEmail}
@@ -98,7 +111,7 @@ const AdminSettings: React.FC = () => {
                     <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">客服电话</label>
                         <input
-                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                             name="supportPhone"
                             data-testid="support-phone-input"
                             value={settings.supportPhone}
@@ -109,7 +122,7 @@ const AdminSettings: React.FC = () => {
                     <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">库存预警阈值</label>
                         <input
-                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                             type="number"
                             name="lowStockThreshold"
                             data-testid="low-stock-threshold-input"
@@ -123,14 +136,16 @@ const AdminSettings: React.FC = () => {
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">仪表盘统计周期</label>
                         <div className="flex gap-3">
                             <button
-                                className={`px-4 py-2 rounded-lg text-sm font-semibold border ${settings.dashboardRange === '6m' ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-[#111418] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+                                aria-label="6个月"
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold border ${settings.dashboardRange === '6m' ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
                                 onClick={() => setSettings(prev => ({ ...prev, dashboardRange: '6m' }))}
                                 disabled={loading}
                             >
                                 最近6个月
                             </button>
                             <button
-                                className={`px-4 py-2 rounded-lg text-sm font-semibold border ${settings.dashboardRange === '12m' ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-[#111418] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+                                aria-label="12个月"
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold border ${settings.dashboardRange === '12m' ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
                                 onClick={() => setSettings(prev => ({ ...prev, dashboardRange: '12m' }))}
                                 disabled={loading}
                             >
@@ -139,6 +154,63 @@ const AdminSettings: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* AI 荐书设置 */}
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="material-symbols-outlined text-primary" aria-hidden="true">auto_awesome</span>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">AI 荐书设置</h3>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* API Key */}
+                        <div className="flex flex-col gap-2 lg:col-span-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">API Key</label>
+                            <div className="relative">
+                                <input
+                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white pr-12"
+                                    type={showApiKey ? 'text' : 'password'}
+                                    value={settings.aiApiKey}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, aiApiKey: e.target.value }))}
+                                    disabled={loading}
+                                    placeholder="sk-xxxxxxxx"
+                                />
+                                <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{showApiKey ? 'visibility_off' : 'visibility'}</span>
+                                </button>
+                            </div>
+                        </div>
+                        {/* Model */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">模型名称</label>
+                            <input className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white" value={settings.aiModel} onChange={(e) => setSettings(prev => ({ ...prev, aiModel: e.target.value }))} disabled={loading} placeholder="openrouter/free" />
+                        </div>
+                        {/* Base URL */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">API 地址</label>
+                            <input className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white" value={settings.aiBaseUrl} onChange={(e) => setSettings(prev => ({ ...prev, aiBaseUrl: e.target.value }))} disabled={loading} placeholder="https://openrouter.ai/api/v1" />
+                        </div>
+                        {/* Temperature */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Temperature ({settings.aiTemperature})</label>
+                            <input type="range" min="0" max="2" step="0.1" value={settings.aiTemperature} onChange={(e) => setSettings(prev => ({ ...prev, aiTemperature: Number(e.target.value) }))} disabled={loading} className="w-full accent-primary" />
+                            <div className="flex justify-between text-xs text-slate-400"><span>精确</span><span>创意</span></div>
+                        </div>
+                        {/* Max Tokens */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">最大 Token</label>
+                            <input className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white" type="number" min="100" max="8000" value={settings.aiMaxTokens} onChange={(e) => setSettings(prev => ({ ...prev, aiMaxTokens: Number(e.target.value) || 2000 }))} disabled={loading} />
+                        </div>
+                        {/* Mock Mode */}
+                        <div className="flex flex-col gap-2 lg:col-span-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Mock 模式（开发/测试用）</label>
+                            <button type="button" onClick={() => setSettings(prev => ({ ...prev, aiMock: !prev.aiMock }))} disabled={loading}
+                                className={`w-14 h-11 rounded-full transition-colors ${settings.aiMock ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.aiMock ? 'translate-x-7' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex flex-wrap gap-3">
                     <button
                         className="px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold shadow-md shadow-blue-500/20 hover:bg-blue-600 transition-colors disabled:opacity-60"
@@ -148,7 +220,7 @@ const AdminSettings: React.FC = () => {
                         保存设置
                     </button>
                     <button
-                        className="px-6 py-2.5 rounded-lg bg-slate-100 dark:bg-[#111418] text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                        className="px-6 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                         onClick={handleReset}
                         disabled={saving || loading}
                     >

@@ -72,18 +72,6 @@
   50% { transform: translateY(-8px); }
 }
 
-.animate-float {
-  animation: float 5s ease-in-out infinite;
-}
-
-/* ===== Gradient Text ===== */
-.text-gradient {
-  background: linear-gradient(135deg, #1a365d 0%, #2b4c7e 50%, #c05621 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* ===== Decorative Line ===== */
 .deco-line {
   position: relative;
@@ -132,7 +120,7 @@
 
 /* ===== Magnetic Button (for hover effect) ===== */
 .magnetic-btn {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .magnetic-btn:hover {

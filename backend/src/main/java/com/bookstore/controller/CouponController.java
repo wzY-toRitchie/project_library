@@ -30,6 +30,14 @@ public class CouponController {
     }
 
     /**
+     * 获取所有优惠券（管理员）
+     */
+    @GetMapping("/admin")
+    public ResponseEntity<List<Coupon>> getAllCoupons() {
+        return ResponseEntity.ok(couponService.getAllCoupons());
+    }
+
+    /**
      * 获取我的优惠券
      */
     @GetMapping("/my")

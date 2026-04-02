@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Typography, Spin, Descriptions } from 'antd';
+import { message } from 'antd';
 import api from '../api';
 import type { SystemSetting } from '../types';
-
-const { Title, Paragraph } = Typography;
 
 const ContactSupport: React.FC = () => {
     const [settings, setSettings] = useState<SystemSetting | null>(null);
@@ -24,34 +22,46 @@ const ContactSupport: React.FC = () => {
     }, []);
 
     if (loading) {
-        return <div className="flex justify-center items-center h-96"><Spin size="large" /></div>;
+        return <div className="flex justify-center items-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
     }
 
     return (
         <div className="max-w-4xl mx-auto py-12 px-4">
-            <Card className="shadow-lg rounded-xl overflow-hidden border-0">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                 <div className="text-center mb-8">
-                    <Title level={2}>联系客服</Title>
-                    <Paragraph className="text-gray-500">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">联系客服</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">
                         如果您有任何问题或建议，请随时联系我们。
-                    </Paragraph>
+                    </p>
                 </div>
 
-                <Descriptions bordered column={1} size="middle">
-                    <Descriptions.Item label="店铺名称">{settings?.storeName || 'Online Bookstore'}</Descriptions.Item>
-                    <Descriptions.Item label="客服邮箱">
-                        <a href={`mailto:${settings?.supportEmail}`} className="text-primary hover:underline">
-                            {settings?.supportEmail || 'support@example.com'}
-                        </a>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="客服电话">
-                        <a href={`tel:${settings?.supportPhone}`} className="text-primary hover:underline">
-                            {settings?.supportPhone || 'N/A'}
-                        </a>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="工作时间">周一至周五 9:00 - 18:00</Descriptions.Item>
-                </Descriptions>
-            </Card>
+                <dl className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <div className="py-3 flex">
+                        <dt className="w-24 text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">店铺名称</dt>
+                        <dd className="text-sm text-slate-900 dark:text-white">{settings?.storeName || 'Online Bookstore'}</dd>
+                    </div>
+                    <div className="py-3 flex">
+                        <dt className="w-24 text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">客服邮箱</dt>
+                        <dd className="text-sm">
+                            <a href={`mailto:${settings?.supportEmail}`} className="text-primary hover:underline">
+                                {settings?.supportEmail || 'support@example.com'}
+                            </a>
+                        </dd>
+                    </div>
+                    <div className="py-3 flex">
+                        <dt className="w-24 text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">客服电话</dt>
+                        <dd className="text-sm">
+                            <a href={`tel:${settings?.supportPhone}`} className="text-primary hover:underline">
+                                {settings?.supportPhone || 'N/A'}
+                            </a>
+                        </dd>
+                    </div>
+                    <div className="py-3 flex">
+                        <dt className="w-24 text-sm font-medium text-slate-500 dark:text-slate-400 shrink-0">工作时间</dt>
+                        <dd className="text-sm text-slate-900 dark:text-white">周一至周五 9:00 - 18:00</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
     );
 };

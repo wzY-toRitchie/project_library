@@ -16,6 +16,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findByCategoryId(Long categoryId, Sort sort);
     Page<Book> findByCategoryId(Long categoryId, Pageable pageable);
     List<Book> findByTitleContainingIgnoreCase(String title);
+    List<Book> findByFeaturedTrue(Pageable pageable);
     boolean existsByCategoryId(Long categoryId);
     
     // 多字段搜索：书名、作者、描述

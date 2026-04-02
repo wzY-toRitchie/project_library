@@ -37,14 +37,12 @@ class ErrorBoundary extends Component<Props, State> {
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[40vh] px-4">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="material-symbols-outlined text-red-500 text-3xl">error</span>
+                            <span className="material-symbols-outlined text-red-500 text-3xl" aria-hidden="true">error</span>
                         </div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                            出现了一些问题
-                        </h2>
+                            出现了一些问题?                        </h2>
                         <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-                            页面加载时发生错误，请稍后重试。
-                        </p>
+                            页面加载时发生错误，请稍后重试。?                        </p>
                         <div className="flex gap-4 justify-center">
                             <button
                                 onClick={this.handleReset}

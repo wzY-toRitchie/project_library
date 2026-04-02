@@ -9,16 +9,20 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/books")
+@Tag(name = "图书", description = "图书查询和管理接口")
 public class BookController {
 
     @Autowired
     private BookService bookService;
 
+    @Operation(summary = "获取所有图书", description = "分页获取图书列表，支持排序")
     @GetMapping
     public PageResponse<Book> getAllBooks(
             @RequestParam(required = false, defaultValue = "createTime") @NonNull String sortBy,
@@ -30,6 +34,7 @@ public class BookController {
         return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
     }
 
+    @Operation(summary = "获取图书详情", description = "根据 ID 获取单本图书信息")
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable @NonNull Long id) {
         return bookService.getBookById(id)
@@ -37,6 +42,7 @@ public class BookController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "按分类获取图书", description = "根据分类 ID 分页获取图书")
     @GetMapping("/category/{categoryId}")
     public PageResponse<Book> getBooksByCategory(
             @PathVariable @NonNull Long categoryId,
@@ -49,6 +55,7 @@ public class BookController {
         return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
     }
 
+    @Operation(summary = "搜索图书", description = "支持关键词搜索，可按分类和排序筛选")
     @GetMapping("/search")
     public PageResponse<Book> searchBooks(
             @RequestParam @NonNull String keyword,
@@ -85,21 +92,25 @@ public class BookController {
         return new PageResponse<>(bookPage.getContent(), page, size, bookPage.getTotalElements());
     }
 
+    @Operation(summary = "搜索建议", description = "根据关键词返回搜索建议")
     @GetMapping("/search/suggestions")
     public List<String> getSearchSuggestions(@RequestParam @NonNull String keyword) {
         return bookService.getSearchSuggestions(keyword);
     }
 
+    @Operation(summary = "热门搜索", description = "获取热门搜索关键词")
     @GetMapping("/search/hot")
     public List<String> getHotSearches() {
         return bookService.getHotSearches();
     }
 
+    @Operation(summary = "创建图书", description = "新增一本图书（管理员）")
     @PostMapping
     public Book createBook(@RequestBody @NonNull Book book) {
         return bookService.saveBook(book);
     }
 
+    @Operation(summary = "更新图书", description = "更新图书信息（管理员）")
     @PutMapping("/{id}")
     public ResponseEntity<Book> updateBook(@PathVariable @NonNull Long id, @RequestBody @NonNull Book bookDetails) {
         return bookService.getBookById(id).map(book -> {
@@ -110,10 +121,12 @@ public class BookController {
             book.setDescription(bookDetails.getDescription());
             book.setCategory(bookDetails.getCategory());
             book.setCoverImage(bookDetails.getCoverImage());
+            book.setFeatured(bookDetails.getFeatured());
             return ResponseEntity.ok(bookService.saveBook(book));
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "删除图书", description = "删除图书（管理员）")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBook(@PathVariable @NonNull Long id) {
         bookService.deleteBook(id);

@@ -1,33 +1,38 @@
 # Online Bookstore System (毕业设计 - 线上书店系统)
 
-这是一个基于现代化技术栈构建的前后端分离电子商务系统，覆盖用户购书全流程与后台管理全链路。面向答辩展示场景，系统内置丰富示例数据（用户、图书、订单与多种订单状态），支持前台与后台完整演示。
+基于 Spring Boot 3 + React 19 的前后端分离在线书店系统，覆盖用户购书全流程与后台管理全链路。内置 AI 智能荐书、Editorial 杂志风格 UI 设计、丰富示例数据，支持前台与后台完整演示。
 
 ## 🛠 技术栈
 
 ### 后端 (Backend)
 
-- **核心框架**: Spring Boot 3.2.2
+- **核心框架**: Spring Boot 3.2.2 (Java 21)
 - **安全鉴权**: Spring Security + JWT (JSON Web Token)
 - **持久层**: Spring Data JPA (Hibernate)
 - **数据库**: MySQL 8.0
-- **工具库**: Lombok, JJWT, Jackson (解决双向引用问题)
+- **API 文档**: Springdoc OpenAPI (Swagger UI)
+- **工具库**: Lombok, JJWT, Jackson
 
 ### 前端 (Frontend)
 
-- **核心框架**: React 18
-- **构建工具**: Vite
-- **语言**: TypeScript
-- **样式框架**: **Tailwind CSS** (v3.4) + PostCSS
-- **UI 组件**: Lucide React (图标), Ant Design (部分组件兼容)
+- **核心框架**: React 19 + TypeScript
+- **构建工具**: Vite 7
+- **样式框架**: Tailwind CSS 3.4 + PostCSS
+- **设计系统**: Editorial 杂志风格
+  - 标题字体: Playfair Display (衬线)
+  - 正文字体: DM Sans (无衬线)
+  - 主色调: 深藏蓝 `#1a365d` + 琥珀橙 `#c05621`
+- **UI 组件**: Lucide React (图标), Ant Design (部分组件)
+- **AI 集成**: OpenRouter API (大语言模型推荐)
 - **状态管理**: React Context API (Auth & Cart)
-- **路由**: React Router v6
-- **HTTP 客户端**: Axios (带拦截器封装)
+- **路由**: React Router v6 (页面懒加载)
+- **HTTP 客户端**: Axios (带 JWT 拦截器)
 
 ## 🚀 快速开始
 
 ### 1. 环境准备
 
-- JDK 17+
+- JDK 21+
 - Node.js 18+
 - MySQL 8.0+
 - Maven 3.6+
@@ -44,26 +49,16 @@
    spring.datasource.password=your_password
    ```
 
-### 3. 初始化数据说明
-
-- 系统启动时会自动创建表结构与示例数据。
-- 示例数据包含 20 本书、多个用户、覆盖待支付/已支付/已发货/已完成/已取消的订单，以及示例收货地址。
-- 若数据库已有历史数据，需清空相关表或重新建库后重启后端，以重新写入示例数据。
-
-### 4. 启动后端
-
-后端启动命令：
+### 3. 启动后端
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-后端服务将运行在 `http://localhost:8080`。
+后端服务运行在 `http://localhost:8080`。
 
-### 5. 启动前端
-
-前端启动命令：
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -71,151 +66,183 @@ npm install
 npm run dev
 ```
 
-前端页面将运行在 `http://localhost:5173`。
-
-### 6. 编译与重启指南
-
-当代码发生变更时，请参考以下步骤进行编译与重启：
-
-**后端 (Backend)**
-
-1. 停止当前运行的后端服务。
-2. 进入后端目录，清理并重新打包：
-   ```bash
-   cd backend
-   mvn clean package -DskipTests
-   ```
-3. 运行生成的 JAR 包：
-   ```bash
-   java -jar target/online-bookstore-0.0.1-SNAPSHOT.jar
-   ```
-   > 提示：如果遇到端口占用错误，请确保已关闭之前的 Java 进程，或手动终止占用 8080 端口的进程。
-
-**前端 (Frontend)**
-
-1. 进入前端目录：
-   ```bash
-   cd frontend
-   ```
-2. 重新构建（可选，用于检查构建错误）：
-   ```bash
-   npm run build
-   ```
-3. 启动开发服务器：
-   ```bash
-   npm run dev
-   ```
-   > 提示：如果默认端口 5173 被占用，Vite 会自动切换到 5174 或更高端口，请查看控制台输出的访问地址。
+前端页面运行在 `http://localhost:5173`。
 
 ## 👤 默认账号
 
-系统初始化时会自动创建以下测试账号与示例用户：
+| 角色     | 用户名  | 密码       | 权限说明         |
+| -------- | ------- | ---------- | ---------------- |
+| 管理员   | `admin` | `Admin@123` | 拥有后台管理权限 |
+| 普通用户 | `user`  | `User@1234` | 仅限浏览和购买   |
 
-| 角色     | 用户名    | 密码       | 权限说明         |
-| -------- | --------- | ---------- | ---------------- |
-| 管理员   | `admin`   | `admin123` | 拥有后台管理权限 |
-| 管理员   | `manager` | `user123`  | 管理后台演示账号 |
-| 普通用户 | `user`    | `user123`  | 仅限浏览和购买   |
-| 普通用户 | `alice`   | `user123`  | 示例用户         |
-| 普通用户 | `bob`     | `user123`  | 示例用户         |
-| 普通用户 | `charlie` | `user123`  | 示例用户         |
-| 普通用户 | `diana`   | `user123`  | 示例用户         |
+> 系统启动时自动初始化，包含 64 本示例图书、364 条评价、多种状态的订单及示例数据。
 
 ## ✨ 主要功能
 
-- **用户认证**: 完整的注册、登录流程，使用 JWT 进行无状态鉴权。
-- **现代化 UI**:
-  - 基于 Tailwind CSS 的全新首页设计。
-  - **全新设计的登录与注册页面**，提供更优的用户体验。
-  - 全中文界面支持。
-  - 响应式布局，适配不同屏幕尺寸。
-- **图书浏览**:
-  - 首页推荐图书展示。
-  - 支持按标题、作者搜索图书。
-- **购物车系统**:
-  - 支持多选商品进行结算。
-  - 实时计算选中商品总价。
-  - 数量增减与商品移除。
-- **订单结算**:
-  - 独立的结算页面 (Checkout)，支持查看收货地址、商品清单及支付方式选择。
-  - 集成多种支付方式 UI (银行卡、微信支付、货到付款)。
-- **订单管理**: 查看历史订单状态与订单详情。
-- **收货地址管理**:
-  - 支持多地址新增、编辑、删除与默认地址设置。
-  - 后台用户管理展示默认地址与地址数量。
-- **后台管理**:
-  - **图书管理增强**：
-    - 新增/编辑/删除与库存维护。
-    - **支持图书封面上传**。
-    - **支持库存批量导入 (CSV/JSON)**。
-    - **低库存智能预警展示**。
-  - 订单管理：状态流转、搜索筛选与订单详情弹窗。
-  - 用户管理：角色切换、资料编辑与删除保护。
-  - 系统设置：店铺信息、客服信息与仪表盘统计周期配置，后端落库并驱动仪表盘。
-- **安全机制**:
-  - 密码加密存储 (BCrypt)
-  - 前端路由守卫
-  - 统一 API 请求拦截 (自动携带 Token)
-  - 解决 JSON 序列化循环引用问题 (@JsonManagedReference / @JsonBackReference)
+### 用户端
 
-## 🔗 关键接口
+- **用户认证**: 注册、登录、JWT 无状态鉴权、密码加密存储 (BCrypt)
+- **AI 智能荐书**: 基于 OpenRouter 大语言模型，根据用户偏好和行为数据智能推荐图书，对话式交互界面
+- **图书浏览**: 首页推荐、分类筛选、搜索、排序、分页
+- **图书详情**: 评分、评价、收藏、浏览历史记录
+- **购物车**: 多选结算、数量增减、实时总价计算
+- **订单结算**: 收货地址选择、优惠券、多种支付方式
+- **订单管理**: 历史订单、状态跟踪、时间线、再次购买
+- **个人中心**: 资料编辑、头像上传、密码修改、多地址管理、积分签到、收藏夹、浏览历史、优惠券
+- **深色模式**: 支持亮色/暗色主题切换
 
-### 用户与认证
+### 管理端
 
-- `POST /api/users/register` 注册
-- `POST /api/users/login` 登录
-- `GET /api/users` 后台用户列表
-- `GET /api/users/addresses` 当前用户地址列表
-- `POST /api/users/addresses` 新增收货地址
-- `PUT /api/users/addresses/{id}` 编辑收货地址
-- `PUT /api/users/addresses/{id}/default` 设置默认地址
-- `DELETE /api/users/addresses/{id}` 删除收货地址
-- `PUT /api/users/{id}` 后台编辑用户资料
-- `PATCH /api/users/{id}/role` 角色更新
+- **仪表盘**: 销售趋势、订单状态分布、热销商品、分类销售、用户增长
+- **图书管理**: 增删改查、封面上传、库存管理、编辑精选标记、CSV/JSON 批量导入、低库存预警
+- **订单管理**: 状态流转、搜索筛选、订单详情、数据导出
+- **用户管理**: 角色切换、资料编辑、删除保护
+- **分类管理**: 分类增删改查
+- **系统设置**: 店铺信息、客服信息、统计周期配置
 
-### 图书与分类
+### 主页板块
 
-- `GET /api/books` 图书列表
-- `GET /api/categories` 分类列表
-- `POST /api/books` 新增图书（管理员）
-- `PATCH /api/books/{id}` 编辑图书（管理员）
+- **热门分类入口**: 带图标的分类快捷入口
+- **新书上架**: 横向滚动展示最新书籍
+- **编辑精选**: 管理员标记的推荐书籍
+- **好评榜 + 热销榜**: 2 列并排排行榜
+- **阅读统计**: 已购/收藏/已评数据
+- **热门作者**: 按评价排名的作者卡片
+- **猜你喜欢**: AI 推荐书籍
+- **最近浏览**: 用户浏览历史
+- **优惠券领取**: 主页侧边栏可领取优惠券
+- **每日签到**: 积分签到功能
+- **信任标识栏**: 正品保障/7天退换/满9包邮/积分兑换
+
+## 🎨 前端设计系统
+
+- **字体**: Playfair Display (标题) + DM Sans (正文)
+- **配色**: 深藏蓝 `#1a365d` / 琥珀橙 `#c05621` / 金色 `#d69e2e`
+- **交互**: 统一按钮/卡片/输入框状态、骨架屏加载、空状态组件、fade-up/stagger 入场动画
+- **无障碍**: aria-label/aria-hidden、focus-visible 样式、语义化 HTML、图片 width/height
+- **性能**: 页面懒加载 (React.lazy)、内容可见性 (content-visibility)、transition 具体属性声明
+
+## 🔗 API 接口
+
+### 认证
+- `POST /api/auth/signup` 注册
+- `POST /api/auth/signin` 登录
+
+### AI 推荐
+- `POST /api/ai/recommend` AI 智能荐书
+
+### 首页
+- `GET /api/home/all` 首页聚合数据
+- `GET /api/home/bestsellers` 热销榜
+- `GET /api/home/new-arrivals` 新书上架
+- `GET /api/home/top-rated` 好评榜
+- `GET /api/home/featured` 编辑精选
+
+### 图书
+- `GET /api/books` 图书列表 (分页)
+- `GET /api/books/{id}` 图书详情
+- `POST /api/books` 新增图书 (管理员)
+- `PUT /api/books/{id}` 编辑图书 (管理员)
+
+### 购物车
+- `GET /api/cart` 获取购物车
+- `POST /api/cart/{bookId}` 添加到购物车
+- `DELETE /api/cart/{bookId}` 移除商品
 
 ### 订单
-
-- `GET /api/orders` 后台订单列表
-- `GET /api/orders/user/{userId}` 用户订单列表
+- `POST /api/orders` 创建订单
+- `GET /api/orders/user` 用户订单列表
 - `PATCH /api/orders/{id}/status` 更新订单状态
 
-### 系统设置
+### 收藏/历史/优惠券
+- `GET/POST/DELETE /api/favorites` 收藏管理
+- `GET/DELETE /api/history` 浏览历史
+- `GET /api/coupons` 优惠券列表
 
-- `GET /api/settings` 获取系统设置
-- `PUT /api/settings` 更新系统设置
+### Swagger 文档
+- `http://localhost:8080/swagger-ui/index.html`
 
 ## 📁 项目结构
 
 ```
 project_library/
-├── backend/                 # Spring Boot 后端
+├── backend/                           # Spring Boot 后端
 │   ├── src/main/java/com/bookstore
-│   │   ├── config/          # 安全与Web配置 (CORS, Security)
-│   │   ├── controller/      # API 控制器
-│   │   ├── entity/          # 数据库实体 (User, Book, Order)
-│   │   ├── repository/      # JPA 仓库
-│   │   ├── security/        # JWT 实现
-│   │   └── service/         # 业务逻辑
-│   └── src/main/resources/  # 配置文件
+│   │   ├── config/                    # 配置类 (Security, Web, Swagger, AI)
+│   │   ├── controller/                # API 控制器 (含 HomeController, AiRecommendationController)
+│   │   ├── entity/                    # JPA 实体 (Book 含 featured, User 含 avatar)
+│   │   ├── enums/                     # 枚举定义
+│   │   ├── exception/                 # 全局异常处理
+│   │   ├── payload/                   # 请求/响应 DTO
+│   │   ├── repository/               # Spring Data JPA
+│   │   ├── security/                  # JWT + Spring Security
+│   │   ├── service/                   # 业务逻辑层 (含 AiRecommendationService)
+│   │   └── utils/                     # 工具类
+│   └── src/main/resources/
+│       └── application.properties     # 应用配置 (含 OpenRouter AI 配置)
 │
-└── frontend/                # React 前端
-    ├── src/
-    │   ├── api/             # Axios 封装
-    │   ├── components/      # 公共组件 (MainLayout)
-    │   ├── context/         # 全局状态 (Auth, Cart)
-    │   ├── pages/           # 页面组件
-    │   │   ├── Home.tsx     # 首页 (Tailwind 重构)
-    │   │   ├── Cart.tsx     # 购物车 (支持多选)
-    │   │   ├── Checkout.tsx # 结算页 (新功能)
-    │   │   └── ...
-    │   └── types/           # TypeScript 类型定义
-    ├── tailwind.config.js   # Tailwind 配置
-    └── postcss.config.js    # PostCSS 配置
+├── frontend/                          # React 前端
+│   ├── src/
+│   │   ├── api/                       # Axios 封装 + 各模块 API (含 ai.ts, home.ts)
+│   │   ├── components/                # 公共组件
+│   │   │   ├── charts/                # 图表组件
+│   │   │   ├── home/                  # 主页板块组件 (8个新组件)
+│   │   │   └── profile/               # 个人中心子组件 (Profile拆分后的5个组件)
+│   │   ├── context/                   # React Context (Auth, Cart)
+│   │   ├── pages/                     # 页面组件 (含 AiRecommend.tsx)
+│   │   ├── types/                     # TypeScript 类型
+│   │   └── utils/                     # 工具函数 (format.ts, password.ts)
+│   ├── index.html                     # 入口 HTML
+│   ├── tailwind.config.js             # Tailwind 配置
+│   └── vite.config.ts                 # Vite 配置
+│
+├── database/                          # 数据库脚本
+│   ├── schema.sql                     # 建表脚本
+│   └── data.sql                       # 示例数据
+│
+└── README.md                          # 项目说明
 ```
+
+## 📝 开发说明
+
+- **后端热重载**: `mvn spring-boot:run` 支持 DevTools 热重载
+- **前端热重载**: `npm run dev` 启用 Vite HMR
+- **Swagger 文档**: 访问 `http://localhost:8080/swagger-ui/index.html` (需 JWT 认证)
+- **数据库初始化**: 首次启动自动建表并插入示例数据 (DataInitializer)
+- **页面懒加载**: 使用 React.lazy + Suspense 实现代码分割
+- **AI 推荐**: 默认 Mock 模式，配置 `OPENROUTER_API_KEY` 环境变量后切换为真实大模型
+
+## 🔄 本次更新 (2026-03-26)
+
+### Bug 修复
+- 修复 ReviewController detached entity 问题 (Book.version)
+- 修复 37 个 TypeScript 编译错误 → 0 错误
+- 修复 22 个 ESLint 错误 → 0 错误
+
+### 架构优化
+- Profile.tsx 从 1293 行拆分为 98 行 orchestrator + 5 个子组件
+- 添加 Swagger API 文档注解 (6 个核心控制器)
+- 页面懒加载 (React.lazy + Suspense)
+- CartContext 使用 useMemo 优化派生状态
+- JWT token 模块级缓存
+
+### 新增功能
+- AI 智能荐书 (OpenRouter 大语言模型集成)
+- 主页丰富化 (8 个新板块: 热销榜/新书上架/编辑精选/好评榜/热门分类/阅读统计/热门作者/信任标识栏)
+- 主页优惠券领取 + 签到积分
+- 管理员编辑精选标记
+- 用户头像上传/删除
+- 结算页面地址跳转到个人中心
+
+### Web Interface Guidelines 合规
+- 46 个 transition-all → 具体属性
+- 29 个 aria-label 添加
+- 160+ 个 aria-hidden 添加
+- 11 个 div onClick → Link
+- 20+ 表单输入 name/autocomplete
+- 17 张图片 width/height
+- CSS color-scheme/touch-action 全局优化
+
+## 📄 License
+
+毕业设计项目，仅供学习交流使用。

@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { getBrowsingHistory } from '../api/history';
-import type { Book, Category } from '../types';
+import type { Book } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { FALLBACK_COVER } from '../utils/constants';
 
 interface RecommendationsProps {
-    categories: Category[];
     onAddToCart?: (book: Book) => void;
 }
 
-const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCart }) => {
+const Recommendations: React.FC<RecommendationsProps> = ({ onAddToCart }) => {
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -20,11 +20,14 @@ const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCa
         const fetchRecommendations = async () => {
             setLoading(true);
             try {
-                // 优先基于浏览历史推荐
                 if (isAuthenticated) {
-                    const history = await getBrowsingHistory();
+                    // Fetch history and popular books in parallel
+                    const [history, popularResponse] = await Promise.all([
+                        getBrowsingHistory().catch(() => []),
+                        api.get('/books?sort=rating,desc&size=4').then(r => r.data)
+                    ]);
+
                     if (history.length > 0) {
-                        // 统计分类偏好
                         const categoryCount: Record<number, number> = {};
                         history.forEach(h => {
                             const catId = h.book.category?.id;
@@ -32,27 +35,28 @@ const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCa
                                 categoryCount[catId] = (categoryCount[catId] || 0) + 1;
                             }
                         });
-                        
-                        // 获取最常浏览的分类
-                        const sortedCategories = Object.entries(categoryCount)
-                            .sort((a, b) => b[1] - a[1]);
-                        
+
+                        const sortedCategories = Object.entries(categoryCount).sort((a, b) => b[1] - a[1]);
+
                         if (sortedCategories.length > 0) {
                             const topCategoryId = sortedCategories[0][0];
-                            const response = await api.get(`/books?categoryId=${topCategoryId}&size=4`);
-                            const data = response.data.content || response.data;
+                            const categoryResponse = await api.get(`/books?categoryId=${topCategoryId}&size=4`);
+                            const data = categoryResponse.data.content || categoryResponse.data;
                             if (Array.isArray(data) && data.length > 0) {
                                 setBooks(data.slice(0, 4));
                                 return;
                             }
                         }
                     }
+
+                    // Fallback to popular books (already fetched)
+                    const popularData = popularResponse.content || popularResponse;
+                    setBooks(Array.isArray(popularData) ? popularData.slice(0, 4) : []);
+                } else {
+                    const response = await api.get('/books?sort=rating,desc&size=4');
+                    const data = response.data.content || response.data;
+                    setBooks(Array.isArray(data) ? data.slice(0, 4) : []);
                 }
-                
-                // 无历史或未登录时，返回热门图书
-                const response = await api.get('/books?sort=rating,desc&size=4');
-                const data = response.data.content || response.data;
-                setBooks(Array.isArray(data) ? data.slice(0, 4) : []);
             } catch (error) {
                 console.error('Failed to fetch recommendations:', error);
                 setBooks([]);
@@ -84,11 +88,11 @@ const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCa
         <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                    {isAuthenticated ? '猜你喜欢' : '热门推荐'}
+                    <span className="material-symbols-outlined text-primary" aria-hidden="true">auto_awesome</span>
+                    编辑精选
                 </h2>
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/search')}
                     className="text-sm text-primary hover:underline"
                 >
                     查看更多 →
@@ -96,21 +100,23 @@ const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCa
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {books.map((book) => (
-                    <div
+                    <Link
                         key={book.id}
-                        className="group bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border border-slate-100 dark:border-slate-700"
-                        onClick={() => navigate(`/book/${book.id}`)}
+                        to={`/book/${book.id}`}
+                        className="group bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-slate-100 dark:border-slate-700"
                     >
-                        <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
+                        <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
                             <img
-                                src={book.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'}
+                                src={book.coverImage || FALLBACK_COVER}
                                 alt={book.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 loading="lazy"
+                                width={300}
+                                height={400}
                             />
                             {book.rating && book.rating > 0 && (
                                 <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">star</span>
+                                    <span className="material-symbols-outlined text-sm" aria-hidden="true">star</span>
                                     {book.rating.toFixed(1)}
                                 </div>
                             )}
@@ -129,13 +135,14 @@ const Recommendations: React.FC<RecommendationsProps> = ({ categories, onAddToCa
                                             onAddToCart(book);
                                         }}
                                         className="p-1 rounded-full hover:bg-primary/10 text-primary"
+                                        aria-label="加入购物车"
                                     >
-                                        <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
+                                        <span className="material-symbols-outlined text-lg" aria-hidden="true">add_shopping_cart</span>
                                     </button>
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </section>

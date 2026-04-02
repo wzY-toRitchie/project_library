@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getSearchHistory, addToSearchHistory, removeFromSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 import { getSearchSuggestions, getHotSearches } from '../api/search';
 
@@ -16,7 +15,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ isOpen, onClose, onSele
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
 
     // 加载搜索历史和热门搜索
     useEffect(() => {
@@ -106,7 +104,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ isOpen, onClose, onSele
                                 onClick={() => handleSelectKeyword(suggestion)}
                                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
                             >
-                                <span className="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                <span className="material-symbols-outlined text-slate-400 text-lg" aria-hidden="true">search</span>
                                 <span className="text-sm text-slate-700 dark:text-slate-300">{suggestion}</span>
                             </div>
                         ))}
@@ -138,7 +136,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ isOpen, onClose, onSele
                                     onClick={(e) => handleRemoveHistory(e, keyword)}
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
-                                    <span className="material-symbols-outlined text-slate-400 text-sm hover:text-red-500">close</span>
+                                    <span className="material-symbols-outlined text-slate-400 text-sm hover:text-red-500" aria-hidden="true">close</span>
                                 </button>
                             </div>
                         ))}
@@ -172,7 +170,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ isOpen, onClose, onSele
             {/* 空状态 */}
             {!showSuggestions && searchHistory.length === 0 && hotSearches.length === 0 && (
                 <div className="p-6 text-center text-slate-500">
-                    <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">search</span>
+                    <span className="material-symbols-outlined text-4xl mb-2 text-slate-300" aria-hidden="true">search</span>
                     <p className="text-sm">输入关键词开始搜索</p>
                 </div>
             )}

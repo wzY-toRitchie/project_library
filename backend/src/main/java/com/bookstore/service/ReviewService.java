@@ -7,6 +7,7 @@ import com.bookstore.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
@@ -18,6 +19,7 @@ public class ReviewService {
     @Autowired
     private BookRepository bookRepository;
 
+    @Transactional
     public Review addReview(@NonNull Review review) {
         Review savedReview = reviewRepository.save(review);
         if (review.getBook() != null) {
@@ -35,6 +37,27 @@ public class ReviewService {
 
     public List<Review> getReviewsByUserId(@NonNull Long userId) {
         return reviewRepository.findByUserId(userId);
+    }
+
+    /**
+     * 获取所有评价（管理员）
+     */
+    public List<Review> getAllReviews() {
+        return reviewRepository.findAll();
+    }
+
+    /**
+     * 删除评价
+     */
+    @Transactional
+    public void deleteReview(Long id) {
+        Review review = reviewRepository.findById(id).orElse(null);
+        if (review != null) {
+            reviewRepository.deleteById(id);
+            if (review.getBook() != null) {
+                updateBookRating(review.getBook().getId());
+            }
+        }
     }
 
     private void updateBookRating(@NonNull Long bookId) {

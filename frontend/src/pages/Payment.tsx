@@ -1,12 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { message, Spin, Result, Button, Card, Typography, Divider } from 'antd';
-import { CheckCircleOutlined, WechatOutlined, AlipayCircleOutlined, CreditCardOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 import api from '../api';
 import type { Order } from '../types';
 import OrderTimeline from '../components/OrderTimeline';
-
-const { Title, Text } = Typography;
+import { FALLBACK_COVER } from '../utils/constants';
 
 const Payment: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -15,6 +13,12 @@ const Payment: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [paymentMethod, setPaymentMethod] = useState('wechat');
     const [paying, setPaying] = useState(false);
+    const isMounted = useRef(true);
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
+    }, []);
 
     const fetchOrder = useCallback(async () => {
         if (!id) return;
@@ -40,77 +44,54 @@ const Payment: React.FC = () => {
 
     const handlePayment = async () => {
         if (!order) return;
-        
         setPaying(true);
-        // Simulate payment delay
-        setTimeout(async () => {
+        const timeoutId = setTimeout(async () => {
             try {
                 await api.patch(`/orders/${order.id}/status`, null, {
                     params: { status: 'PAID' }
                 });
-                message.success('支付成功！');
-                navigate('/profile?tab=orders');
+                if (isMounted.current) {
+                    message.success('支付成功！');
+                    navigate('/order-confirm', { state: { orderId: order.id, status: 'PAID', totalPrice: order.totalPrice } });
+                }
             } catch (error) {
                 console.error('Payment failed:', error);
-                message.error('支付失败，请重试');
+                if (isMounted.current) {
+                    message.error('支付失败，请重试');
+                }
             } finally {
-                setPaying(false);
+                if (isMounted.current) setPaying(false);
             }
         }, 1500);
+        return () => clearTimeout(timeoutId);
     };
 
     const paymentMethods = [
-        {
-            key: 'wechat',
-            name: '微信支付',
-            icon: <WechatOutlined className="text-3xl" />,
-            iconColor: 'text-green-600',
-            borderColor: 'border-green-500',
-            bgColor: 'bg-green-50 dark:bg-green-900/20',
-            checkColor: 'text-green-500',
-            recommended: true
-        },
-        {
-            key: 'alipay',
-            name: '支付宝',
-            icon: <AlipayCircleOutlined className="text-3xl" />,
-            iconColor: 'text-blue-600',
-            borderColor: 'border-blue-500',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-            checkColor: 'text-blue-500',
-            recommended: false
-        },
-        {
-            key: 'card',
-            name: '银行卡',
-            icon: <CreditCardOutlined className="text-3xl" />,
-            iconColor: 'text-primary',
-            borderColor: 'border-primary',
-            bgColor: 'bg-primary/10',
-            checkColor: 'text-primary',
-            recommended: false
-        }
+        { key: 'wechat', name: '微信支付', icon: 'chat', iconClass: 'text-green-600', borderClass: 'border-green-500', bgClass: 'bg-green-50 dark:bg-green-900/20', checkClass: 'text-green-500', recommended: true },
+        { key: 'alipay', name: '支付宝', icon: 'account_balance_wallet', iconClass: 'text-blue-600', borderClass: 'border-blue-500', bgClass: 'bg-blue-50 dark:bg-blue-900/20', checkClass: 'text-blue-500', recommended: false },
+        { key: 'card', name: '银行卡', icon: 'credit_card', iconClass: 'text-primary', borderClass: 'border-primary', bgClass: 'bg-primary/10', checkClass: 'text-primary', recommended: false },
     ];
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <Spin size="large" tip="加载中..." />
+            <div className="flex justify-center items-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-slate-500 text-sm">加载中…</span>
+                </div>
             </div>
         );
     }
 
     if (!order) {
         return (
-            <Result
-                status="error"
-                title="订单不存在"
-                extra={
-                    <Button type="primary" onClick={() => navigate('/')}>
-                        返回首页
-                    </Button>
-                }
-            />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+                <span className="material-symbols-outlined text-6xl text-slate-300 mb-4" aria-hidden="true">error</span>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">订单不存在</h2>
+                <button onClick={() => navigate('/')} className="mt-4 px-6 py-3 bg-primary text-white font-bold rounded-lg hover:bg-blue-600 transition-colors">
+                    返回首页
+                </button>
+            </div>
         );
     }
 
@@ -119,37 +100,38 @@ const Payment: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Payment Card */}
                 <div className="lg:col-span-2">
-                    <Card className="shadow-md rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 p-8">
                         {/* Header */}
                         <div className="text-center mb-6">
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-                                <ClockCircleOutlined className="text-3xl text-primary" />
+                                <span className="material-symbols-outlined text-3xl text-primary" aria-hidden="true">schedule</span>
                             </div>
-                            <Text type="secondary">订单提交成功，请尽快完成支付</Text>
+                            <p className="text-slate-500 dark:text-slate-400">订单提交成功，请尽快完成支付</p>
                             <div className="mt-4">
-                                <Text className="text-sm text-slate-500">应付金额</Text>
-                                <Title level={1} className="m-0 text-primary">
+                                <p className="text-sm text-slate-500">应付金额</p>
+                                <p className="text-4xl font-black text-primary tracking-tight">
                                     ¥{order.totalPrice.toFixed(2)}
-                                </Title>
+                                </p>
                             </div>
-                            <Text type="secondary" className="text-xs">
+                            <p className="text-xs text-slate-400 mt-1">
                                 订单号: ORD-{order.id.toString().padStart(6, '0')}
-                            </Text>
+                            </p>
                         </div>
 
-                        <Divider />
+                        <div className="h-px bg-slate-100 dark:bg-slate-700 my-6" />
 
                         {/* Payment Methods */}
                         <div className="mb-6">
-                            <Title level={5} className="mb-4">选择支付方式</Title>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">选择支付方式</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {paymentMethods.map((method) => (
-                                    <div
+                                    <button
                                         key={method.key}
                                         onClick={() => setPaymentMethod(method.key)}
-                                        className={`relative cursor-pointer border-2 rounded-xl p-5 flex flex-col items-center gap-3 transition-all ${
-                                            paymentMethod === method.key 
-                                                ? `${method.borderColor} ${method.bgColor}` 
+                                        aria-label={method.name}
+                                        className={`relative cursor-pointer border-2 rounded-xl p-5 flex flex-col items-center gap-3 transition-colors ${
+                                            paymentMethod === method.key
+                                                ? `${method.borderClass} ${method.bgClass}`
                                                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                                         }`}
                                     >
@@ -158,46 +140,48 @@ const Payment: React.FC = () => {
                                                 推荐
                                             </span>
                                         )}
-                                        <div className={method.iconColor}>{method.icon}</div>
+                                        <span className={`material-symbols-outlined text-3xl ${method.iconClass}`} aria-hidden="true">{method.icon}</span>
                                         <span className="font-medium text-slate-900 dark:text-white">{method.name}</span>
                                         {paymentMethod === method.key && (
-                                            <CheckCircleOutlined className={`absolute top-3 right-3 text-lg ${method.checkColor}`} />
+                                            <span className={`material-symbols-outlined absolute top-3 right-3 text-lg ${method.checkClass}`} aria-hidden="true">check_circle</span>
                                         )}
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
 
                         {/* Pay Button */}
-                        <Button 
-                            type="primary" 
-                            size="large" 
-                            block 
-                            loading={paying}
+                        <button
                             onClick={handlePayment}
-                            className="h-14 text-lg font-bold bg-primary hover:bg-blue-600 rounded-xl"
+                            disabled={paying}
+                            className="w-full h-14 flex items-center justify-center gap-2 bg-primary text-white font-bold text-lg rounded-xl hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg active:scale-[0.98] transform duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {paying ? '正在处理...' : `立即支付 ¥${order.totalPrice.toFixed(2)}`}
-                        </Button>
+                            {paying && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                            {paying ? '正在处理…' : `立即支付 ¥${order.totalPrice.toFixed(2)}`}
+                        </button>
 
                         {/* Tips */}
-                        <div className="mt-4 text-center text-xs text-slate-400">
-                            <p>点击支付即表示您同意《用户协议》和《隐私政策》</p>
-                        </div>
-                    </Card>
+                        <p className="mt-4 text-center text-xs text-slate-400">
+                            点击支付即表示您同意《用户协议》和《隐私政策》
+                        </p>
+                    </div>
                 </div>
 
                 {/* Order Summary & Timeline */}
                 <div className="space-y-6">
                     {/* Order Summary */}
-                    <Card className="shadow-md rounded-xl border border-slate-200 dark:border-slate-700">
-                        <Title level={5} className="mb-4">订单摘要</Title>
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 p-6">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">订单摘要</h3>
                         <div className="space-y-3">
                             {order.items?.map((item) => (
                                 <div key={item.id} className="flex items-center gap-3">
-                                    <div 
-                                        className="w-12 h-16 bg-cover bg-center rounded"
-                                        style={{ backgroundImage: `url(${item.book?.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'})` }}
+                                    <img
+                                        src={item.book?.coverImage || FALLBACK_COVER}
+                                        alt={item.book?.title || '图书'}
+                                        className="w-12 h-16 object-cover rounded"
+                                        loading="lazy"
+                                        width={48}
+                                        height={64}
                                     />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{item.book?.title}</p>
@@ -207,21 +191,21 @@ const Payment: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                        <Divider />
+                        <div className="h-px bg-slate-100 dark:bg-slate-700 my-4" />
                         <div className="flex justify-between items-center">
-                            <Text className="text-slate-500">合计</Text>
-                            <Text strong className="text-xl text-primary">¥{order.totalPrice.toFixed(2)}</Text>
+                            <span className="text-slate-500">合计</span>
+                            <span className="text-xl font-bold text-primary">¥{order.totalPrice.toFixed(2)}</span>
                         </div>
-                    </Card>
+                    </div>
 
                     {/* Order Timeline */}
-                    <Card className="shadow-md rounded-xl border border-slate-200 dark:border-slate-700">
-                        <Title level={5} className="mb-4">订单状态</Title>
-                        <OrderTimeline 
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 p-6">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">订单状态</h3>
+                        <OrderTimeline
                             status={order.status}
                             createTime={order.createTime}
                         />
-                    </Card>
+                    </div>
                 </div>
             </div>
         </div>

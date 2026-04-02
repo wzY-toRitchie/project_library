@@ -7,6 +7,12 @@ export const getAvailableCoupons = async (): Promise<Coupon[]> => {
     return response.data;
 };
 
+// 获取所有优惠券（管理员）
+export const getAllCoupons = async (): Promise<Coupon[]> => {
+    const response = await api.get('/coupons/admin');
+    return response.data;
+};
+
 // 获取我的优惠券
 export const getMyCoupons = async (): Promise<UserCoupon[]> => {
     const response = await api.get('/coupons/my');

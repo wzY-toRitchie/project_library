@@ -13,9 +13,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 
+@Tag(name = "订单", description = "订单创建和管理接口")
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
@@ -23,6 +26,7 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Operation(summary = "获取所有订单", description = "分页获取所有订单（管理员）")
     @GetMapping
     public PageResponse<Order> getAllOrders(
             @RequestParam(required = false, defaultValue = "0") int page,
@@ -32,6 +36,7 @@ public class OrderController {
         return new PageResponse<>(orderPage.getContent(), page, size, orderPage.getTotalElements());
     }
 
+    @Operation(summary = "获取用户订单", description = "根据用户 ID 获取订单列表")
     @GetMapping("/user/{userId}")
     public PageResponse<Order> getOrdersByUserId(
             @PathVariable @NonNull Long userId,
@@ -42,6 +47,7 @@ public class OrderController {
         return new PageResponse<>(orderPage.getContent(), page, size, orderPage.getTotalElements());
     }
 
+    @Operation(summary = "获取我的订单", description = "获取当前登录用户的订单列表")
     @GetMapping("/my")
     public PageResponse<Order> getMyOrders(
             @RequestParam(required = false, defaultValue = "0") int page,
@@ -52,6 +58,7 @@ public class OrderController {
         return new PageResponse<>(orderPage.getContent(), page, size, orderPage.getTotalElements());
     }
 
+    @Operation(summary = "获取订单详情", description = "根据 ID 获取单个订单信息")
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(@PathVariable @NonNull Long id) {
         return orderService.getOrderById(id)
@@ -59,6 +66,7 @@ public class OrderController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "创建订单", description = "从购物车创建新订单")
     @PostMapping
     public ResponseEntity<?> createOrder(@RequestBody @NonNull OrderCreateRequest request) {
         try {
@@ -68,6 +76,7 @@ public class OrderController {
         }
     }
 
+    @Operation(summary = "更新订单状态", description = "修改订单状态（支付/发货/完成）")
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateOrderStatus(@PathVariable @NonNull Long id, @RequestParam @NonNull String status) {
         try {
@@ -81,8 +90,8 @@ public class OrderController {
                 if (!isOwner) {
                     return ResponseEntity.status(403).body("无权修改他人订单状态");
                 }
-                // 普通用户只能将订单改为已支付状态
-                if (orderStatus != OrderStatus.PAID) {
+                // 普通用户只能将订单改为已支付或已完成状态
+                if (orderStatus != OrderStatus.PAID && orderStatus != OrderStatus.COMPLETED) {
                     return ResponseEntity.status(403).body("无权执行此操作");
                 }
             }
@@ -93,6 +102,7 @@ public class OrderController {
         }
     }
 
+    @Operation(summary = "删除订单", description = "删除订单记录")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOrder(@PathVariable @NonNull Long id) {
         try {
@@ -110,6 +120,7 @@ public class OrderController {
         }
     }
 
+    @Operation(summary = "取消订单", description = "取消未完成的订单")
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelOrder(@PathVariable @NonNull Long id, @RequestBody(required = false) Map<String, String> requestBody) {
         try {
@@ -129,6 +140,7 @@ public class OrderController {
         }
     }
 
+    @Operation(summary = "批量更新订单状态", description = "批量修改多个订单的状态")
     @PostMapping("/batch/status")
     public ResponseEntity<?> batchUpdateOrderStatus(@RequestBody Map<String, Object> request) {
         try {

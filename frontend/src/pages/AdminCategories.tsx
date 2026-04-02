@@ -117,18 +117,19 @@ const AdminCategories: React.FC = () => {
 
             <div className="flex flex-col gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined" aria-hidden="true">search</span>
                     <input
-                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索分类名称..."
                         type="text"
+                        aria-label="搜索分类"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -141,7 +142,7 @@ const AdminCategories: React.FC = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={3} className="px-6 py-10 text-center text-slate-500">加载中...</td>
+                                    <td colSpan={3} className="px-6 py-10 text-center text-slate-500">加载中…</td>
                                 </tr>
                             ) : filteredCategories.length === 0 ? (
                                 <tr>
@@ -176,14 +177,14 @@ const AdminCategories: React.FC = () => {
 
             {modalOpen && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-                    <div className="bg-white dark:bg-[#1a2632] rounded-xl shadow-lg p-6 w-full max-w-md border border-slate-200 dark:border-slate-700">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 w-full max-w-md border border-slate-200 dark:border-slate-700">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
                             {editingCategory ? '编辑分类' : '新增分类'}
                         </h3>
                         <div className="flex flex-col gap-2 mb-6">
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">分类名称</label>
                             <input
-                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#111418] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
+                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white"
                                 name="categoryName"
                                 data-testid="category-name-input"
                                 value={formName}
@@ -193,7 +194,7 @@ const AdminCategories: React.FC = () => {
                         </div>
                         <div className="flex justify-end gap-3">
                             <button
-                                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-[#111418] text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                                 onClick={closeModal}
                                 disabled={saving}
                             >

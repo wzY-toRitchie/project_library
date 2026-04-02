@@ -39,11 +39,11 @@ public class ExportController {
         
         for (Order order : orders) {
             csv.append(String.format("%s,%s,%.2f,%s,%s\n",
-                order.getId() != null ? "ORD-" + String.format("%06d", order.getId()) : "",
-                order.getUser() != null ? order.getUser().getUsername() : "",
+                escapeCsv(order.getId() != null ? "ORD-" + String.format("%06d", order.getId()) : ""),
+                escapeCsv(order.getUser() != null ? order.getUser().getUsername() : ""),
                 order.getTotalPrice() != null ? order.getTotalPrice().doubleValue() : 0.0,
-                getStatusLabel(order.getStatus()),
-                order.getCreateTime() != null ? order.getCreateTime().format(formatter) : ""
+                escapeCsv(getStatusLabel(order.getStatus())),
+                escapeCsv(order.getCreateTime() != null ? order.getCreateTime().format(formatter) : "")
             ));
         }
         
@@ -68,12 +68,12 @@ public class ExportController {
         for (User user : users) {
             csv.append(String.format("%d,%s,%s,%s,%s,%s,%s\n",
                 user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFullName() != null ? user.getFullName() : "",
-                user.getPhoneNumber() != null ? user.getPhoneNumber() : "",
-                user.getRole(),
-                user.getCreateTime() != null ? user.getCreateTime().format(formatter) : ""
+                escapeCsv(user.getUsername()),
+                escapeCsv(user.getEmail()),
+                escapeCsv(user.getFullName() != null ? user.getFullName() : ""),
+                escapeCsv(user.getPhoneNumber() != null ? user.getPhoneNumber() : ""),
+                escapeCsv(user.getRole()),
+                escapeCsv(user.getCreateTime() != null ? user.getCreateTime().format(formatter) : "")
             ));
         }
         
@@ -98,11 +98,11 @@ public class ExportController {
         for (var book : books) {
             csv.append(String.format("%d,%s,%s,%.2f,%d,%s\n",
                 book.getId(),
-                book.getTitle(),
-                book.getAuthor(),
+                escapeCsv(book.getTitle()),
+                escapeCsv(book.getAuthor()),
                 book.getPrice() != null ? book.getPrice().doubleValue() : 0.0,
                 book.getStock(),
-                book.getCategory() != null ? book.getCategory().getName() : ""
+                escapeCsv(book.getCategory() != null ? book.getCategory().getName() : "")
             ));
         }
         
@@ -120,5 +120,17 @@ public class ExportController {
     private String getStatusLabel(com.bookstore.enums.OrderStatus status) {
         if (status == null) return "";
         return status.getDescription();
+    }
+
+    private String escapeCsv(Object value) {
+        if (value == null) return "";
+        String str = value.toString();
+        if (str.contains(",") || str.contains("\"") || str.contains("\n") || str.contains("\r")) {
+            return "\"" + str.replace("\"", "\"\"") + "\"";
+        }
+        if (str.startsWith("=") || str.startsWith("+") || str.startsWith("-") || str.startsWith("@")) {
+            return "'" + str;
+        }
+        return str;
     }
 }

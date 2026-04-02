@@ -3,6 +3,7 @@ import { message } from 'antd';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../api';
+import { getPasswordStrength, getPasswordStrengthLabel } from '../utils/password';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
@@ -18,18 +19,9 @@ const Register: React.FC = () => {
         acceptedTerms: false
     });
 
-    const strength = useMemo(() => {
-        const password = formValues.password;
-        let score = 0;
-        if (password.length >= 8) score += 1;
-        if (/[a-z]/.test(password)) score += 1;  // 小写字母
-        if (/[A-Z]/.test(password)) score += 1;  // 大写字母
-        if (/[0-9]/.test(password)) score += 1;  // 数字
-        if (/[^a-zA-Z0-9]/.test(password)) score += 1;  // 特殊字符
-        return score;
-    }, [formValues.password]);
+    const strength = useMemo(() => getPasswordStrength(formValues.password), [formValues.password]);
 
-    const strengthLabel = strength >= 4 ? '强' : strength >= 3 ? '中' : strength >= 2 ? '弱' : '非常弱';
+    const strengthLabel = getPasswordStrengthLabel(strength);
     const strengthColor = strength >= 4 ? 'text-green-500' : strength >= 3 ? 'text-yellow-500' : strength >= 2 ? 'text-orange-500' : 'text-red-500';
 
     const onFinish = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -74,7 +66,7 @@ const Register: React.FC = () => {
                 password,
                 role: ["user"]
             });
-            message.success('注册成功，请登录！');
+            message.success('注册成功，请登录');
             navigate('/login');
         } catch (error) {
             console.error('Registration failed:', error);
@@ -100,7 +92,7 @@ const Register: React.FC = () => {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-xl mb-4">
-                        <span className="material-symbols-outlined text-primary text-3xl">auto_stories</span>
+                        <span className="material-symbols-outlined text-primary text-3xl" aria-hidden="true">auto_stories</span>
                     </div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">创建账号</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-2">加入我们的线上书店社区。</p>
@@ -109,16 +101,16 @@ const Register: React.FC = () => {
                     <form className="space-y-5" onSubmit={onFinish}>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="username">
-                                用户名
-                            </label>
+                                用户名                            </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
                                     person
                                 </span>
                                 <input
-                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
                                     id="username"
                                     name="username"
+                                    autoComplete="username"
                                     placeholder="请输入用户名"
                                     type="text"
                                     required
@@ -132,13 +124,14 @@ const Register: React.FC = () => {
                                 邮箱
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
                                     mail
                                 </span>
                                 <input
-                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
                                     id="email"
                                     name="email"
+                                    autoComplete="email"
                                     placeholder="请输入邮箱"
                                     type="email"
                                     required
@@ -149,14 +142,13 @@ const Register: React.FC = () => {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="phone">
-                                手机号
-                            </label>
+                                手机号                            </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
                                     phone_iphone
                                 </span>
                                 <input
-                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
                                     id="phone"
                                     name="phone"
                                     placeholder="选填"
@@ -171,13 +163,14 @@ const Register: React.FC = () => {
                                 密码
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
                                     lock
                                 </span>
                                 <input
-                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
                                     id="password"
-                                    name="password"
+                                    name="new-password"
+                                    autoComplete="new-password"
                                     placeholder="请输入密码"
                                     type={showPassword ? 'text' : 'password'}
                                     required
@@ -188,13 +181,14 @@ const Register: React.FC = () => {
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
+                                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
                                 >
-                                    <span className="material-symbols-outlined text-xl">{showPassword ? 'visibility' : 'visibility_off'}</span>
+                                    <span className="material-symbols-outlined text-xl" aria-hidden="true">{showPassword ? 'visibility' : 'visibility_off'}</span>
                                 </button>
                             </div>
                                 <div className="mt-2">
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                                         强度：<span className={strengthColor}>{strengthLabel}</span>
                                     </span>
                                 </div>
@@ -210,9 +204,8 @@ const Register: React.FC = () => {
                                         ></div>
                                     ))}
                                 </div>
-                                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                                    密码需至少8位，包含大小写字母和数字。
-                                </p>
+                                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                    密码需至少8位，包含大小写字母和数字。                                </p>
                             </div>
                         </div>
                         <div>
@@ -220,13 +213,14 @@ const Register: React.FC = () => {
                                 确认密码
                             </label>
                             <div className="relative group">
-                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
                                     verified_user
                                 </span>
                                 <input
-                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-primary/50 dark:border-primary/50 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+                                    className="w-full pl-11 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-primary/50 dark:border-primary/50 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
                                     id="confirm-password"
                                     name="confirm-password"
+                                    autoComplete="new-password"
                                     placeholder="请再次输入密码"
                                     type={showConfirm ? 'text' : 'password'}
                                     required
@@ -237,8 +231,9 @@ const Register: React.FC = () => {
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                                     type="button"
                                     onClick={() => setShowConfirm(prev => !prev)}
+                                    aria-label={showConfirm ? '隐藏密码' : '显示密码'}
                                 >
-                                    <span className="material-symbols-outlined text-xl">{showConfirm ? 'visibility' : 'visibility_off'}</span>
+                                    <span className="material-symbols-outlined text-xl" aria-hidden="true">{showConfirm ? 'visibility' : 'visibility_off'}</span>
                                 </button>
                             </div>
                         </div>
@@ -252,23 +247,21 @@ const Register: React.FC = () => {
                                 onChange={(event) => setFormValues(prev => ({ ...prev, acceptedTerms: event.target.checked }))}
                             />
                             <label className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed" htmlFor="terms">
-                                我已阅读并同意 <span className="text-primary hover:underline font-medium">服务条款</span> 与{' '}
-                                <span className="text-primary hover:underline font-medium">隐私政策</span>。
-                            </label>
+                                我已阅读并同意<span className="text-primary hover:underline font-medium">服务条款</span> 与{' '}
+                                <span className="text-primary hover:underline font-medium">隐私政策</span>                            </label>
                         </div>
                         <button
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-primary/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60"
+                            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-primary/25 transition-colors transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60"
                             type="submit"
                             disabled={loading}
                         >
-                            {loading ? '正在创建...' : '创建账号'}
-                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                            {loading ? '正在创建…' : '创建账号'}
+                            <span className="material-symbols-outlined text-lg" aria-hidden="true">arrow_forward</span>
                         </button>
                     </form>
                     <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            已有账号？
-                            <Link className="text-primary font-semibold hover:underline decoration-2 underline-offset-4 ml-1" to="/login">
+                            已有账号？                            <Link className="text-primary font-semibold hover:underline decoration-2 underline-offset-4 ml-1" to="/login">
                                 立即登录
                             </Link>
                         </p>
@@ -280,14 +273,8 @@ const Register: React.FC = () => {
                         <button className="text-xs text-slate-500 hover:text-primary transition-colors" type="button">联系支持</button>
                         <button className="text-xs text-slate-500 hover:text-primary transition-colors" type="button">文档</button>
                     </div>
-                    <p className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">书店系统 © 2024</p>
+                    <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">书店系统 &copy; 2026</p>
                 </footer>
-            </div>
-            <div className="fixed top-0 right-0 -z-10 opacity-5 pointer-events-none">
-                <div className="bg-primary w-[500px] h-[500px] rounded-full blur-[100px] -mr-64 -mt-64"></div>
-            </div>
-            <div className="fixed bottom-0 left-0 -z-10 opacity-5 pointer-events-none">
-                <div className="bg-primary w-[500px] h-[500px] rounded-full blur-[100px] -ml-64 -mb-64"></div>
             </div>
         </div>
     );

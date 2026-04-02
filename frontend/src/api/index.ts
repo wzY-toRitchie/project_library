@@ -8,26 +8,43 @@ const api = axios.create({
     }
 });
 
+// Module-level cache for JWT token (avoids repeated localStorage reads)
+let cachedToken: string | null = null;
+let tokenChecked = false;
+
+function getToken(): string | null {
+    if (!tokenChecked) {
+        tokenChecked = true;
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                cachedToken = user?.accessToken ?? null;
+            }
+        } catch {
+            localStorage.removeItem('user');
+            cachedToken = null;
+        }
+    }
+    return cachedToken;
+}
+
+// Call this from AuthContext login/logout to keep cache in sync
+export function clearTokenCache(): void {
+    cachedToken = null;
+    tokenChecked = false;
+}
+
 // Request interceptor - 自动附加 JWT Token
 api.interceptors.request.use(
     (config) => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            try {
-                const user = JSON.parse(userStr);
-                if (user.accessToken) {
-                    config.headers['Authorization'] = `Bearer ${user.accessToken}`;
-                }
-            } catch {
-                // JSON 解析失败，清除无效数据
-                localStorage.removeItem('user');
-            }
+        const token = getToken();
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 // Response interceptor - 处理认证失败
@@ -36,6 +53,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             // Token 过期或无效，清除本地存储并跳转登录
+            clearTokenCache();
             localStorage.removeItem('user');
             // 避免在登录页重复跳转
             if (!window.location.pathname.includes('/login')) {

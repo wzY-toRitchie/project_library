@@ -43,6 +43,25 @@ public class SystemSettingService {
         if (request.getDashboardRange() != null) {
             settings.setDashboardRange(request.getDashboardRange());
         }
+        // AI 设置
+        if (request.getAiApiKey() != null) {
+            settings.setAiApiKey(request.getAiApiKey());
+        }
+        if (request.getAiModel() != null) {
+            settings.setAiModel(request.getAiModel());
+        }
+        if (request.getAiBaseUrl() != null) {
+            settings.setAiBaseUrl(request.getAiBaseUrl());
+        }
+        if (request.getAiTemperature() != null) {
+            settings.setAiTemperature(request.getAiTemperature());
+        }
+        if (request.getAiMaxTokens() != null) {
+            settings.setAiMaxTokens(request.getAiMaxTokens());
+        }
+        if (request.getAiMock() != null) {
+            settings.setAiMock(request.getAiMock());
+        }
         return systemSettingRepository.save(Objects.requireNonNull(settings));
     }
 

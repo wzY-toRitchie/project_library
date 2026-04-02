@@ -5,12 +5,9 @@ import { useCart } from '../../context/CartContext';
 import type { Favorite } from '../../types';
 import { message } from 'antd';
 import EmptyState from '../EmptyState';
+import { FALLBACK_COVER } from '../../utils/constants';
 
-interface FavoritesListProps {
-    onAddToCart?: (favorite: Favorite) => void;
-}
-
-const FavoritesList: React.FC<FavoritesListProps> = ({ onAddToCart }) => {
+const FavoritesList: React.FC = () => {
     const { addToCart } = useCart();
     const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [loading, setLoading] = useState(false);
@@ -36,7 +33,7 @@ const FavoritesList: React.FC<FavoritesListProps> = ({ onAddToCart }) => {
             await removeFavorite(bookId);
             setFavorites(prev => prev.filter(f => f.book.id !== bookId));
             message.success('已取消收藏');
-        } catch (error) {
+        } catch {
             message.error('取消收藏失败');
         }
     };
@@ -53,7 +50,7 @@ const FavoritesList: React.FC<FavoritesListProps> = ({ onAddToCart }) => {
             stock: 99,
             rating: 5,
             description: '',
-            categoryId: 0
+            category: book.category ?? { id: 0, name: '' }
         });
         message.success(`${book.title} 已加入购物车`);
     };
@@ -88,9 +85,12 @@ const FavoritesList: React.FC<FavoritesListProps> = ({ onAddToCart }) => {
                         <div key={favorite.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex gap-4">
                             <Link to={`/book/${book.id}`} className="flex-shrink-0">
                                 <img
-                                    src={book.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'}
+                                    src={book.coverImage || FALLBACK_COVER}
                                     alt={book.title}
                                     className="w-20 h-28 object-cover rounded-lg"
+                                    loading="lazy"
+                                    width={80}
+                                    height={112}
                                 />
                             </Link>
                             <div className="flex-1 min-w-0">

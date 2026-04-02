@@ -4,7 +4,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import OAuth2Buttons from '../components/OAuth2Buttons';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -29,7 +28,7 @@ const Login: React.FC = () => {
         try {
             const response = await api.post('/auth/signin', { username, password });
             login(response.data);
-            message.success('登录成功！');
+            message.success('登录成功');
             
             if (response.data.roles && (response.data.roles.includes('ADMIN') || response.data.roles.includes('ROLE_ADMIN'))) {
                 navigate('/admin');
@@ -65,14 +64,13 @@ const Login: React.FC = () => {
                     
                     <div className="z-10 text-center text-white">
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-8 border border-white/20">
-                            <span className="material-symbols-outlined text-4xl text-amber-300">auto_stories</span>
+                            <span className="material-symbols-outlined text-4xl text-amber-300" aria-hidden="true">auto_stories</span>
                         </div>
                         <h2 className="font-display text-4xl font-bold mb-4 leading-tight">
                             JavaBooks
                         </h2>
                         <p className="text-blue-100/70 font-body text-base leading-relaxed max-w-xs mx-auto mb-8">
-                            你的专属知识入口，在书海中发现新的世界。
-                        </p>
+                            你的专属知识入口，在书海中发现新的世界。                        </p>
                         {/* Decorative book quote */}
                         <div className="mt-6 pt-6 border-t border-white/10">
                             <p className="font-display italic text-white/50 text-sm">
@@ -81,9 +79,6 @@ const Login: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* Floating decorative elements */}
-                    <div className="absolute top-12 right-16 w-24 h-24 rounded-full bg-amber-400/10 blur-2xl animate-float"></div>
-                    <div className="absolute bottom-16 left-12 w-32 h-32 rounded-full bg-blue-400/10 blur-2xl animate-float" style={{ animationDelay: '3s' }}></div>
                 </div>
 
                 {/* Right Panel - Form */}
@@ -91,30 +86,29 @@ const Login: React.FC = () => {
                     <div className="mb-10 text-center md:text-left">
                         <div className="md:hidden flex justify-center mb-6">
                             <div className="inline-flex items-center justify-center w-14 h-14 hero-pattern rounded-xl">
-                                <span className="material-symbols-outlined text-2xl text-amber-300">auto_stories</span>
+                                <span className="material-symbols-outlined text-2xl text-amber-300" aria-hidden="true">auto_stories</span>
                             </div>
                         </div>
                         <h1 className="font-display text-3xl font-bold text-ink dark:text-white mb-2">
                             欢迎回来
                         </h1>
                         <p className="text-ink-light dark:text-slate-400 font-body">
-                            登录你的账户，继续探索好书。
-                        </p>
+                            登录你的账户，继续探索好书。                        </p>
                     </div>
 
                     <form className="space-y-5" onSubmit={onFinish}>
                         <div>
                             <label className="block text-sm font-semibold text-ink dark:text-slate-300 mb-2 font-body" htmlFor="username">
-                                用户名
-                            </label>
+                                用户名                            </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
-                                    <span className="material-symbols-outlined text-[20px]">person</span>
+                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">person</span>
                                 </div>
                                 <input
                                     className="input-elegant block w-full pl-11 pr-3 py-3 bg-white dark:bg-slate-800 text-ink dark:text-white placeholder-slate-400 font-body text-sm"
                                     id="username"
                                     name="username"
+                                    autoComplete="username"
                                     placeholder="请输入用户名"
                                     required
                                     type="text"
@@ -130,12 +124,13 @@ const Login: React.FC = () => {
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
-                                    <span className="material-symbols-outlined text-[20px]">lock</span>
+                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">lock</span>
                                 </div>
                                 <input
                                     className="input-elegant block w-full pl-11 pr-11 py-3 bg-white dark:bg-slate-800 text-ink dark:text-white placeholder-slate-400 font-body text-sm"
                                     id="password"
                                     name="password"
+                                    autoComplete="current-password"
                                     placeholder="请输入密码"
                                     required
                                     type={showPassword ? 'text' : 'password'}
@@ -146,8 +141,9 @@ const Login: React.FC = () => {
                                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-primary transition-colors"
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
+                                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
                                 >
-                                    <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility' : 'visibility_off'}</span>
+                                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{showPassword ? 'visibility' : 'visibility_off'}</span>
                                 </button>
                             </div>
                         </div>
@@ -163,16 +159,14 @@ const Login: React.FC = () => {
                                     onChange={(event) => setFormValues(prev => ({ ...prev, remember: event.target.checked }))}
                                 />
                                 <label className="ml-2 block text-sm text-ink-light dark:text-slate-400 cursor-pointer select-none font-body" htmlFor="remember-me">
-                                    记住我
-                                </label>
+                                    记住我                                </label>
                             </div>
                             <div className="text-sm">
                                 <button
                                     type="button"
                                     className="font-medium text-primary hover:text-accent transition-colors font-body"
                                 >
-                                    忘记密码？
-                                </button>
+                                    忘记密码？                                </button>
                             </div>
                         </div>
 
@@ -187,13 +181,11 @@ const Login: React.FC = () => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
-                                    正在登录...
+                                    正在登录…
                                 </span>
                             ) : '登录'}
                         </button>
                     </form>
-
-                    <OAuth2Buttons />
 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-ink-light dark:text-slate-400 font-body">
@@ -206,8 +198,8 @@ const Login: React.FC = () => {
 
                     {/* Footer branding */}
                     <div className="mt-auto pt-8 flex items-center justify-center">
-                        <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-body font-semibold">
-                            JavaBooks v1.0
+                        <span className="text-xs text-slate-400 uppercase tracking-[0.2em] font-body font-semibold">
+                            JavaBooks
                         </span>
                     </div>
                 </div>
@@ -219,9 +211,10 @@ const Login: React.FC = () => {
                     className="p-3 bg-white dark:bg-slate-800 shadow-lg rounded-full text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors"
                     onClick={() => document.documentElement.classList.toggle('dark')}
                     type="button"
+                    aria-label="切换主题"
                 >
-                    <span className="material-symbols-outlined block dark:hidden">dark_mode</span>
-                    <span className="material-symbols-outlined hidden dark:block">light_mode</span>
+                    <span className="material-symbols-outlined block dark:hidden" aria-hidden="true">dark_mode</span>
+                    <span className="material-symbols-outlined hidden dark:block" aria-hidden="true">light_mode</span>
                 </button>
             </div>
         </div>

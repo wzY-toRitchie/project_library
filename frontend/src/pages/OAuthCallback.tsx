@@ -1,44 +1,48 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { message, Spin } from 'antd';
+import { message } from 'antd';
 
-const OAuthCallback: React.FC = () => {
-    const { login } = useAuth();
+const OAuthCallback = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { login } = useAuth();
 
     useEffect(() => {
         const token = searchParams.get('token');
-        const userId = searchParams.get('userId');
-        const username = searchParams.get('username');
-        const email = searchParams.get('email');
+        const error = searchParams.get('error');
 
-        if (token && userId) {
-            const userData = {
-                id: Number(userId),
-                username: username || '',
-                email: email || '',
-                accessToken: token,
-                tokenType: 'Bearer',
-                roles: ['ROLE_USER'],
-            };
+        if (error) {
+            message.error('登录失败，请重试');
+            navigate('/login');
+            return;
+        }
 
-            login(userData);
-            message.success('登录成功');
-            navigate('/');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                login({
+                    id: payload.sub ? Number(payload.sub) : 0,
+                    username: payload.username || '',
+                    email: payload.email || '',
+                    roles: payload.roles || [],
+                    accessToken: token,
+                    tokenType: 'Bearer'
+                });
+                message.success('登录成功！');
+                navigate('/');
+            } catch {
+                message.error('登录信息解析失败');
+                navigate('/login');
+            }
         } else {
-            message.error('OAuth 登录失败，请重试');
             navigate('/login');
         }
     }, [searchParams, login, navigate]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-            <div className="text-center">
-                <Spin size="large" />
-                <p className="mt-4 text-gray-600 dark:text-gray-400">正在完成登录...</p>
-            </div>
+        <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
     );
 };

@@ -8,6 +8,13 @@ export interface Book {
     category: Category;
     coverImage: string;
     rating?: number;
+    categoryId?: number;
+    featured?: boolean;
+    isbn?: string;
+    publisher?: string;
+    publishDate?: string;
+    pages?: number;
+    originalPrice?: number;
 }
 
 export interface Category {
@@ -23,6 +30,7 @@ export interface User {
     fullName?: string;
     phoneNumber?: string;
     address?: string;
+    avatar?: string;
 }
 
 export interface OrderItem {
@@ -32,12 +40,19 @@ export interface OrderItem {
     book: Book;
 }
 
+export interface OrderUser {
+    id: number;
+    username: string;
+    email: string;
+}
+
 export interface Order {
     id: number;
     totalPrice: number;
     status: string;
     createTime: string;
     items: OrderItem[];
+    user?: OrderUser;
 }
 
 export interface Review {

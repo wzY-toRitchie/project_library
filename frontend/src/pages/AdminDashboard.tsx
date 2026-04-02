@@ -1,19 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { message } from 'antd';
-import { 
-    DollarSign, 
-    ShoppingCart, 
-    Users, 
-    Package,
-    TrendingUp,
-    Calendar,
-    Bell,
-    Download,
-    Truck,
-    Clock,
-    AlertTriangle
-} from 'lucide-react';
+
 import { 
     getDashboardSummary, 
     getSalesTrend, 
@@ -33,11 +21,12 @@ import type {
     UserGrowth,
     TodoItems
 } from '../api/dashboard';
-import SalesTrendChart from '../components/charts/SalesTrendChart';
-import OrderStatusChart from '../components/charts/OrderStatusChart';
-import TopProductsChart from '../components/charts/TopProductsChart';
-import CategorySalesChart from '../components/charts/CategorySalesChart';
-import UserGrowthChart from '../components/charts/UserGrowthChart';
+
+const SalesTrendChart = lazy(() => import('../components/charts/SalesTrendChart'));
+const OrderStatusChart = lazy(() => import('../components/charts/OrderStatusChart'));
+const TopProductsChart = lazy(() => import('../components/charts/TopProductsChart'));
+const CategorySalesChart = lazy(() => import('../components/charts/CategorySalesChart'));
+const UserGrowthChart = lazy(() => import('../components/charts/UserGrowthChart'));
 
 const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -108,7 +97,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <TrendingUp className="text-primary" />
+                            <span className="material-symbols-outlined text-primary">trending_up</span>
                             数据可视化大屏
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400 mt-1">
@@ -118,9 +107,11 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm">
                         <button
                             onClick={() => setTrendDays(7)}
+                            aria-label="查看7天数据"
+                            aria-pressed={trendDays === 7}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                trendDays === 7 
-                                    ? 'bg-primary text-white' 
+                                trendDays === 7
+                                    ? 'bg-primary text-white'
                                     : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
                             }`}
                         >
@@ -128,9 +119,11 @@ const AdminDashboard: React.FC = () => {
                         </button>
                         <button
                             onClick={() => setTrendDays(30)}
+                            aria-label="查看30天数据"
+                            aria-pressed={trendDays === 30}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                trendDays === 30 
-                                    ? 'bg-primary text-white' 
+                                trendDays === 30
+                                    ? 'bg-primary text-white'
                                     : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
                             }`}
                         >
@@ -154,7 +147,7 @@ const AdminDashboard: React.FC = () => {
                                 </p>
                             </div>
                             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                                <DollarSign className="w-6 h-6 text-green-600" />
+                                <span className="material-symbols-outlined w-6 h-6 text-green-600">attach_money</span>
                             </div>
                         </div>
                     </div>
@@ -172,7 +165,7 @@ const AdminDashboard: React.FC = () => {
                                 </p>
                             </div>
                             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                                <ShoppingCart className="w-6 h-6 text-blue-600" />
+                                <span className="material-symbols-outlined w-6 h-6 text-blue-600">shopping_cart</span>
                             </div>
                         </div>
                     </div>
@@ -187,7 +180,7 @@ const AdminDashboard: React.FC = () => {
                                 </p>
                             </div>
                             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                                <Users className="w-6 h-6 text-purple-600" />
+                                <span className="material-symbols-outlined w-6 h-6 text-purple-600">group</span>
                             </div>
                         </div>
                     </div>
@@ -202,7 +195,7 @@ const AdminDashboard: React.FC = () => {
                                 </p>
                             </div>
                             <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-                                <Package className="w-6 h-6 text-orange-600" />
+                                <span className="material-symbols-outlined w-6 h-6 text-orange-600">inventory_2</span>
                             </div>
                         </div>
                     </div>
@@ -214,48 +207,48 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Bell className="w-5 h-5 text-primary" />
+                                <span className="material-symbols-outlined w-5 h-5 text-primary">notifications</span>
                                 待办事项
                             </h3>
                         </div>
                         <div className="space-y-3">
-                            <div 
-                                onClick={() => navigate('/admin/orders')}
+                            <Link
+                                to="/admin/orders"
                                 className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <Clock className="w-5 h-5 text-yellow-600" />
+                                    <span className="material-symbols-outlined w-5 h-5 text-yellow-600">schedule</span>
                                     <span className="text-sm text-slate-700 dark:text-slate-300">待支付订单</span>
                                 </div>
                                 <span className="text-lg font-bold text-yellow-600">{todos?.pendingOrders || 0}</span>
-                            </div>
-                            <div 
-                                onClick={() => navigate('/admin/orders')}
+                            </Link>
+                            <Link
+                                to="/admin/orders"
                                 className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <Truck className="w-5 h-5 text-blue-600" />
+                                    <span className="material-symbols-outlined w-5 h-5 text-blue-600">local_shipping</span>
                                     <span className="text-sm text-slate-700 dark:text-slate-300">待发货订单</span>
                                 </div>
                                 <span className="text-lg font-bold text-blue-600">{todos?.paidOrders || 0}</span>
-                            </div>
-                            <div 
-                                onClick={() => navigate('/admin/books')}
+                            </Link>
+                            <Link
+                                to="/admin/books"
                                 className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                                    <span className="material-symbols-outlined w-5 h-5 text-red-600">warning</span>
                                     <span className="text-sm text-slate-700 dark:text-slate-300">库存预警商品</span>
                                 </div>
                                 <span className="text-lg font-bold text-red-600">{todos?.lowStockBooks || 0}</span>
-                            </div>
+                            </Link>
                         </div>
                     </div>
 
                     {/* Quick Actions */}
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-                            <TrendingUp className="w-5 h-5 text-primary" />
+                            <span className="material-symbols-outlined w-5 h-5 text-primary">trending_up</span>
                             快捷操作
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
@@ -263,7 +256,7 @@ const AdminDashboard: React.FC = () => {
                                 onClick={() => navigate('/admin/orders')}
                                 className="flex items-center gap-2 p-4 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
                             >
-                                <Truck className="w-5 h-5 text-primary" />
+                                <span className="material-symbols-outlined w-5 h-5 text-primary">local_shipping</span>
                                 <span className="text-sm font-medium text-primary">批量发货</span>
                             </button>
                             <button
@@ -277,7 +270,7 @@ const AdminDashboard: React.FC = () => {
                                 }}
                                 className="flex items-center gap-2 p-4 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors"
                             >
-                                <Download className="w-5 h-5 text-green-600" />
+                                <span className="material-symbols-outlined w-5 h-5 text-green-600">download</span>
                                 <span className="text-sm font-medium text-green-600">导出订单</span>
                             </button>
                             <button
@@ -291,7 +284,7 @@ const AdminDashboard: React.FC = () => {
                                 }}
                                 className="flex items-center gap-2 p-4 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors"
                             >
-                                <Download className="w-5 h-5 text-purple-600" />
+                                <span className="material-symbols-outlined w-5 h-5 text-purple-600">download</span>
                                 <span className="text-sm font-medium text-purple-600">导出用户</span>
                             </button>
                             <button
@@ -305,7 +298,7 @@ const AdminDashboard: React.FC = () => {
                                 }}
                                 className="flex items-center gap-2 p-4 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50 rounded-lg transition-colors"
                             >
-                                <Download className="w-5 h-5 text-orange-600" />
+                                <span className="material-symbols-outlined w-5 h-5 text-orange-600">download</span>
                                 <span className="text-sm font-medium text-orange-600">导出商品</span>
                             </button>
                         </div>
@@ -316,12 +309,12 @@ const AdminDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Sales Trend */}
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        {salesTrend && <SalesTrendChart dates={salesTrend.dates} sales={salesTrend.sales} />}
+                        {salesTrend && <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}><SalesTrendChart dates={salesTrend.dates} sales={salesTrend.sales} /></Suspense>}
                     </div>
 
                     {/* Order Status */}
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        {orderStatus && <OrderStatusChart data={orderStatus.data} />}
+                        {orderStatus && <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}><OrderStatusChart data={orderStatus.data} /></Suspense>}
                     </div>
                 </div>
 
@@ -329,18 +322,18 @@ const AdminDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Top Products */}
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        {topProducts && <TopProductsChart names={topProducts.names} sales={topProducts.sales} />}
+                        {topProducts && <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}><TopProductsChart names={topProducts.names} sales={topProducts.sales} /></Suspense>}
                     </div>
 
                     {/* Category Sales */}
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        {categorySales && <CategorySalesChart data={categorySales.data} />}
+                        {categorySales && <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}><CategorySalesChart data={categorySales.data} /></Suspense>}
                     </div>
                 </div>
 
                 {/* User Growth Chart */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                    {userGrowth && <UserGrowthChart dates={userGrowth.dates} counts={userGrowth.counts} />}
+                    {userGrowth && <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}><UserGrowthChart dates={userGrowth.dates} counts={userGrowth.counts} /></Suspense>}
                 </div>
             </div>
         </div>

@@ -1,6 +1,8 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.User;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.bookstore.payload.request.UpdatePasswordRequest;
 import com.bookstore.payload.request.UpdateProfileRequest;
 import com.bookstore.payload.response.MessageResponse;
@@ -19,12 +21,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "用户", description = "用户信息和账户管理接口")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
     @GetMapping("/{id}")
+    @Operation(summary = "获取用户信息", description = "根据 ID 获取用户摘要信息")
     public ResponseEntity<UserSummaryResponse> getUserById(@PathVariable @NonNull Long id) {
         return userService.getUserSummary(id)
                 .map(ResponseEntity::ok)
@@ -32,11 +36,13 @@ public class UserController {
     }
 
     @GetMapping
+    @Operation(summary = "获取所有用户", description = "获取所有用户列表（管理员）")
     public List<UserSummaryResponse> getAllUsers() {
         return userService.getAllUserSummaries();
     }
 
     @PatchMapping("/{id}/role")
+    @Operation(summary = "更新用户角色", description = "修改用户角色（管理员）")
     public ResponseEntity<User> updateUserRole(@PathVariable @NonNull Long id, @RequestParam @NonNull String role) {
         if (!SecurityUtils.isAdmin()) {
             return ResponseEntity.status(403).build();
@@ -49,6 +55,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "删除用户", description = "删除用户账户（管理员）")
     public ResponseEntity<?> deleteUser(@PathVariable @NonNull Long id) {
         if (!SecurityUtils.isAdmin()) {
             return ResponseEntity.status(403).body(new MessageResponse("只有管理员可以删除用户"));
@@ -62,6 +69,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "获取当前用户", description = "获取当前登录用户的详细信息")
     public ResponseEntity<?> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -84,6 +92,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
+    @Operation(summary = "更新个人资料", description = "更新当前用户的姓名、邮箱、手机号")
     public ResponseEntity<?> updateProfile(@Valid @RequestBody @NonNull UpdateProfileRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
@@ -105,6 +114,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "管理员更新用户", description = "管理员编辑用户资料")
     public ResponseEntity<?> updateUserByAdmin(@PathVariable @NonNull Long id,
             @Valid @RequestBody @NonNull UpdateProfileRequest request) {
         if (!SecurityUtils.isAdmin()) {
@@ -120,6 +130,7 @@ public class UserController {
     }
 
     @PutMapping("/password")
+    @Operation(summary = "修改密码", description = "修改当前用户的登录密码")
     public ResponseEntity<?> updatePassword(@Valid @RequestBody @NonNull UpdatePasswordRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {

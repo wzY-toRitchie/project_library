@@ -40,11 +40,10 @@ const StarRating: React.FC<StarRatingProps> = ({
                     return (
                         <span
                             key={index}
-                            className={`${sizeClasses[size]} ${interactive ? 'cursor-pointer' : ''}`}
+                            className={`${sizeClasses[size]} ${interactive ? 'cursor-pointer' : ''} ${isFilled || isHalf ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}`}
                             onClick={() => handleClick(starValue)}
-                            style={{ color: isFilled || isHalf ? '#f59e0b' : '#d1d5db' }}
                         >
-                            {isFilled ? '★' : isHalf ? '★' : '☆'}
+                            {isFilled ? <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star</span> : isHalf ? <span className="material-symbols-outlined">star_half</span> : <span className="material-symbols-outlined">star</span>}
                         </span>
                     );
                 })}

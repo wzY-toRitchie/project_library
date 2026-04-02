@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { message } from 'antd';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingCart as ShoppingCartIcon } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { FALLBACK_COVER } from '../utils/constants';
 
 const Cart: React.FC = () => {
     const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
@@ -60,7 +60,7 @@ const Cart: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
                 <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6">
-                    <ShoppingCartIcon className="w-12 h-12 text-gray-400" />
+                    <span className="material-symbols-outlined text-5xl text-gray-400" aria-hidden="true">shopping_cart</span>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">购物车空空如也</h2>
                 <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md">
@@ -129,10 +129,12 @@ const Cart: React.FC = () => {
                                     onChange={() => handleSelectItem(item.id)}
                                 />
                                 <div className="h-20 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-700">
-                                    <img 
-                                        src={item.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'} 
-                                        alt={item.title} 
+                                    <img
+                                        src={item.coverImage || FALLBACK_COVER}
+                                        alt={item.title}
                                         className="h-full w-full object-cover"
+                                        width={56}
+                                        height={80}
                                     />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -145,8 +147,9 @@ const Cart: React.FC = () => {
                                 <button 
                                     onClick={() => removeFromCart(item.id)}
                                     className="self-start p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                    aria-label="删除商品"
                                 >
-                                    <Trash2 size={16} />
+                                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
                                 </button>
                             </div>
                             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -155,16 +158,18 @@ const Cart: React.FC = () => {
                                     <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700">
                                         <button 
                                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                            className="flex size-7 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            className="flex w-11 h-11 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            aria-label="减少数量"
                                         >
-                                            <Minus size={12} />
+                                            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">remove</span>
                                         </button>
                                         <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
                                         <button 
                                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                            className="flex size-7 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            className="flex w-11 h-11 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            aria-label="增加数量"
                                         >
-                                            <Plus size={12} />
+                                            <span className="material-symbols-outlined text-[12px]" aria-hidden="true">add</span>
                                         </button>
                                     </div>
                                 </div>
@@ -211,10 +216,12 @@ const Cart: React.FC = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700">
-                                                    <img 
-                                                        src={item.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'} 
-                                                        alt={item.title} 
+                                                    <img
+                                                        src={item.coverImage || FALLBACK_COVER}
+                                                        alt={item.title}
                                                         className="h-full w-full object-cover"
+                                                        width={48}
+                                                        height={64}
                                                     />
                                                 </div>
                                                 <div className="flex flex-col">
@@ -230,21 +237,23 @@ const Cart: React.FC = () => {
                                             <div className="flex w-fit items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                                                 <button 
                                                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    className="flex size-8 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+                                                    className="flex w-11 h-11 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+                                                    aria-label="减少数量"
                                                 >
-                                                    <Minus size={14} />
+                                                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">remove</span>
                                                 </button>
                                                 <input 
                                                     type="text" 
                                                     value={item.quantity} 
                                                     readOnly
-                                                    className="h-8 w-10 border-none bg-transparent text-center text-sm font-medium text-slate-900 focus:ring-0 dark:text-white"
+                                                    className="h-11 w-10 border-none bg-transparent text-center text-sm font-medium text-slate-900 focus:ring-0 dark:text-white"
                                                 />
                                                 <button 
                                                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                    className="flex size-8 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+                                                    className="flex w-11 h-11 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+                                                    aria-label="增加数量"
                                                 >
-                                                    <Plus size={14} />
+                                                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">add</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -254,10 +263,11 @@ const Cart: React.FC = () => {
                                         <td className="px-6 py-4 text-center">
                                             <button 
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="flex size-8 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                                                className="flex w-11 h-11 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
                                                 title="删除商品"
+                                                aria-label="删除商品"
                                             >
-                                                <Trash2 size={18} />
+                                                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -301,17 +311,28 @@ const Cart: React.FC = () => {
                             </div>
                         </div>
                         <div className="mt-6 flex flex-col gap-3 sm:mt-0 sm:flex-row sm:items-center">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="输入优惠券代码…"
+                                    className="w-40 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary"
+                                    aria-label="优惠券代码"
+                                />
+                                <button className="rounded-lg border border-primary text-primary px-4 py-2 text-sm font-medium hover:bg-primary/5 transition-colors">
+                                    使用
+                                </button>
+                            </div>
                             <button 
                                 onClick={handleCheckout}
                                 disabled={selectedCartItems.length === 0}
-                                className={`flex w-full items-center justify-center gap-2 rounded-lg px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all sm:w-auto ${
+                                className={`flex w-full items-center justify-center gap-2 rounded-lg px-8 py-3.5 text-sm font-bold text-white shadow-md transition-colors,transition-transform sm:w-auto ${
                                     selectedCartItems.length === 0 
                                     ? 'bg-slate-400 cursor-not-allowed' 
                                     : 'bg-primary shadow-blue-500/20 hover:bg-blue-600 active:scale-[0.98]'
                                 }`}
                             >
                                 去结算
-                                <ArrowRight size={20} />
+                                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_forward</span>
                             </button>
                         </div>
                     </div>

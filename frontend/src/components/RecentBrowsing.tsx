@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getRecentBrowsingHistory } from '../api/history';
 import type { Book } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { FALLBACK_COVER } from '../utils/constants';
 
 interface RecentBrowsingProps {
     onAddToCart?: (book: Book) => void;
@@ -53,29 +54,29 @@ const RecentBrowsing: React.FC<RecentBrowsingProps> = ({ onAddToCart }) => {
         <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">history</span>
-                    最近浏览
-                </h2>
+                    <span className="material-symbols-outlined text-primary" aria-hidden="true">history</span>
+                    最近浏览</h2>
                 <button
                     onClick={() => navigate('/profile')}
                     className="text-sm text-primary hover:underline"
                 >
-                    查看全部 →
-                </button>
+                    查看全部 →</button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {books.map((book) => (
                     <div
                         key={book.id}
-                        className="group bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border border-slate-100 dark:border-slate-700"
+                        className="group bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-slate-100 dark:border-slate-700"
                         onClick={() => navigate(`/book/${book.id}`)}
                     >
-                        <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
+                        <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
                             <img
-                                src={book.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'}
+                                src={book.coverImage || FALLBACK_COVER}
                                 alt={book.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 loading="lazy"
+                                width={300}
+                                height={400}
                             />
                         </div>
                         <div className="p-3">
@@ -92,8 +93,9 @@ const RecentBrowsing: React.FC<RecentBrowsingProps> = ({ onAddToCart }) => {
                                             onAddToCart(book);
                                         }}
                                         className="p-1 rounded-full hover:bg-primary/10 text-primary"
+                                        aria-label="加入购物车"
                                     >
-                                        <span className="material-symbols-outlined text-lg">add_shopping_cart</span>
+                                        <span className="material-symbols-outlined text-lg" aria-hidden="true">add_shopping_cart</span>
                                     </button>
                                 )}
                             </div>

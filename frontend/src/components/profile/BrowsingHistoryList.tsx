@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import type { BrowsingHistory } from '../../types';
 import { message } from 'antd';
 import EmptyState from '../EmptyState';
+import { FALLBACK_COVER } from '../../utils/constants';
 
 const BrowsingHistoryList: React.FC = () => {
     const { addToCart } = useCart();
@@ -32,7 +33,7 @@ const BrowsingHistoryList: React.FC = () => {
             await deleteBrowsingHistory(id);
             setHistory(prev => prev.filter(h => h.id !== id));
             message.success('已删除');
-        } catch (error) {
+        } catch {
             message.error('删除失败');
         }
     };
@@ -42,7 +43,7 @@ const BrowsingHistoryList: React.FC = () => {
             await clearBrowsingHistory();
             setHistory([]);
             message.success('已清空浏览历史');
-        } catch (error) {
+        } catch {
             message.error('清空失败');
         }
     };
@@ -58,7 +59,7 @@ const BrowsingHistoryList: React.FC = () => {
                 stock: 99,
                 rating: 5,
                 description: '',
-                categoryId: 0
+                category: item.book.category ?? { id: 0, name: '' }
             });
             message.success(`${item.book.title} 已加入购物车`);
         }
@@ -99,9 +100,12 @@ const BrowsingHistoryList: React.FC = () => {
                     <div key={item.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex gap-4">
                         <Link to={`/book/${item.book.id}`} className="flex-shrink-0">
                             <img
-                                src={item.book.coverImage || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=300&h=400'}
+                                src={item.book.coverImage || FALLBACK_COVER}
                                 alt={item.book.title}
                                 className="w-20 h-28 object-cover rounded-lg"
+                                loading="lazy"
+                                width={80}
+                                height={112}
                             />
                         </Link>
                         <div className="flex-1 min-w-0">

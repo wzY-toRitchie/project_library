@@ -30,6 +30,7 @@
 /* ===== Base Styles ===== */
 html {
   scroll-behavior: smooth;
+  color-scheme: light dark;
 }
 
 body {
@@ -37,6 +38,7 @@ body {
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
 }
 
 /* ===== Reduced Motion Support ===== */
@@ -65,9 +67,14 @@ body {
   font-family: var(--font-body);
 }
 
-h1, h2, h3 {
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4 {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /* ===== Scrollbar ===== */
@@ -91,6 +98,13 @@ h1, h2, h3 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
+}
+
+/* ===== Safe Area Utilities ===== */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ===== Grain Texture ===== */
@@ -123,7 +137,7 @@ h1, h2, h3 {
 
 /* ===== Card Interactions ===== */
 .card-elegant {
-  background: white;
+  background: var(--color-surface, white);
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
@@ -276,8 +290,8 @@ h1, h2, h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   background: transparent;
   color: var(--color-ink-light);
@@ -314,7 +328,7 @@ h1, h2, h3 {
     border-color var(--transition-fast) var(--easing-default),
     box-shadow var(--transition-fast) var(--easing-default),
     background var(--transition-fast) var(--easing-default);
-  background: white;
+  background: var(--color-surface, white);
   min-height: 44px;
 }
 
@@ -608,4 +622,141 @@ input[type="radio"]:hover {
   background: linear-gradient(90deg, #f0eeea 25%, #e8e5e0 50%, #f0eeea 75%);
   background-size: 200% 100%;
   animation: shimmer 1.8s infinite;
+}
+
+/* ===== Section Entry Animations ===== */
+.section-animate {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section-animate.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children entry */
+.stagger-entry > * {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.stagger-entry.visible > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(3) { transition-delay: 0.15s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(4) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(5) { transition-delay: 0.25s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(6) { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(7) { transition-delay: 0.35s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(8) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(9) { transition-delay: 0.45s; opacity: 1; transform: translateY(0); }
+.stagger-entry.visible > *:nth-child(10) { transition-delay: 0.5s; opacity: 1; transform: translateY(0); }
+
+/* ===== Section Divider ===== */
+.section-divider {
+  position: relative;
+  padding: 3rem 0;
+}
+
+.section-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #cbd5e0, transparent);
+}
+
+.section-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px rgba(192, 86, 33, 0.1);
+}
+
+/* ===== Enhanced Card Hover ===== */
+.card-hover-lift {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* ===== Number Counter Animation ===== */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: countUp 0.5s ease-out forwards;
+}
+
+/* ===== Background Textures ===== */
+.bg-paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.bg-gradient-section {
+  background: linear-gradient(180deg, rgba(245, 243, 239, 0) 0%, rgba(245, 243, 239, 0.5) 100%);
+}
+
+/* ===== Smooth Scroll Container ===== */
+.scroll-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e0;
+}
+
+/* ===== Rank Badge Glow ===== */
+.rank-glow-1 {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.rank-glow-2 {
+  box-shadow: 0 0 10px rgba(156, 163, 175, 0.3);
+}
+
+.rank-glow-3 {
+  box-shadow: 0 0 10px rgba(180, 83, 9, 0.3);
+}
+
+/* ===== Content Visibility for Long Lists ===== */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+/* Book grid performance */
+.book-grid-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
 }

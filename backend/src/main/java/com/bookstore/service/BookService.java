@@ -85,6 +85,10 @@ public class BookService {
         return bookRepository.save(book);
     }
 
+    public List<Book> getFeaturedBooks(int limit) {
+        return bookRepository.findByFeaturedTrue(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "rating")));
+    }
+
     public void deleteBook(@NonNull Long id) {
         bookRepository.deleteById(id);
     }

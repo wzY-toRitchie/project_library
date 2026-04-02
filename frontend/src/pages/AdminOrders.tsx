@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import { message, Modal } from 'antd';
-import { exportOrders } from '../api/export';
 import type { Order } from '../types';
 import { TableSkeleton } from '../components/Skeleton';
-import EmptyState, { TableEmpty } from '../components/EmptyState';
+import { TableEmpty } from '../components/EmptyState';
 
 const statusText: Record<string, string> = {
     PENDING: '待支付',
@@ -198,11 +197,12 @@ const AdminOrders: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 h-full">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div className="relative w-full max-w-md">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined" aria-hidden="true">search</span>
                     <input
-                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
+                        className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white shadow-sm transition-shadow"
                         placeholder="搜索订单号、用户或图书..."
                         type="text"
+                        aria-label="搜索订单"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -215,7 +215,7 @@ const AdminOrders: React.FC = () => {
                             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                                 statusFilter === status
                                     ? 'bg-primary text-white border-primary'
-                                    : 'bg-white dark:bg-[#1a2632] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                         >
                             {status === 'all' ? '全部' : statusText[status]}
@@ -225,23 +225,23 @@ const AdminOrders: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-xs text-slate-500 font-medium">待支付</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white">{counts.PENDING}</p>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-xs text-slate-500 font-medium">已支付</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white">{counts.PAID}</p>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-xs text-slate-500 font-medium">已发货</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white">{counts.SHIPPED}</p>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-xs text-slate-500 font-medium">已完成</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white">{counts.COMPLETED}</p>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-xs text-slate-500 font-medium">已取消</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white">{counts.CANCELLED}</p>
                 </div>
@@ -287,7 +287,7 @@ const AdminOrders: React.FC = () => {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-[#1a2632] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>

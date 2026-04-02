@@ -264,5 +264,32 @@ CREATE TABLE system_settings (
     dashboard_range VARCHAR(20) DEFAULT '30'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =============================================
+-- 16. 操作日志表
+-- =============================================
+DROP TABLE IF EXISTS operation_logs;
+CREATE TABLE operation_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    username VARCHAR(50),
+    module VARCHAR(50),
+    description VARCHAR(200),
+    operation_type VARCHAR(20),
+    method VARCHAR(200),
+    params TEXT,
+    url VARCHAR(500),
+    ip VARCHAR(50),
+    user_agent VARCHAR(500),
+    execution_time BIGINT,
+    status VARCHAR(20),
+    error_msg TEXT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_create_time (create_time),
+    INDEX idx_module (module),
+    INDEX idx_operation_type (operation_type),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 建表完成
 SELECT 'Database schema created successfully!' AS message;

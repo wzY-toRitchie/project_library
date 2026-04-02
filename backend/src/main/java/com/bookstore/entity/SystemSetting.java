@@ -18,4 +18,18 @@ public class SystemSetting {
     private String supportPhone;
     private Integer lowStockThreshold;
     private String dashboardRange;
+
+    // AI 荐书设置
+    @Column(columnDefinition = "VARCHAR(500) DEFAULT ''")
+    private String aiApiKey = "";
+    @Column(columnDefinition = "VARCHAR(255) DEFAULT 'openrouter/free'")
+    private String aiModel = "openrouter/free";
+    @Column(columnDefinition = "VARCHAR(500) DEFAULT 'https://openrouter.ai/api/v1'")
+    private String aiBaseUrl = "https://openrouter.ai/api/v1";
+    @Column(columnDefinition = "DOUBLE DEFAULT 0.7")
+    private Double aiTemperature = 0.7;
+    @Column(columnDefinition = "INT DEFAULT 2000")
+    private Integer aiMaxTokens = 2000;
+    @Column(columnDefinition = "BOOLEAN DEFAULT false")
+    private Boolean aiMock = false;
 }

@@ -9,6 +9,8 @@ import com.bookstore.repository.UserRepository;
 import com.bookstore.security.jwt.JwtUtils;
 import com.bookstore.security.services.UserDetailsImpl;
 import com.bookstore.service.LoginAttemptService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "认证", description = "用户注册和登录接口")
 public class AuthController {
   private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
@@ -44,6 +47,7 @@ public class AuthController {
   @Autowired
   LoginAttemptService loginAttemptService;
 
+  @Operation(summary = "用户登录", description = "使用用户名和密码登录，返回 JWT Token")
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
     String username = loginRequest.getUsername();
@@ -100,18 +104,19 @@ public class AuthController {
     }
   }
 
+  @Operation(summary = "用户注册", description = "注册新用户，需要用户名、邮箱和密码")
   @PostMapping("/signup")
   public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
     if (userRepository.existsByUsername(signUpRequest.getUsername())) {
       return ResponseEntity
           .badRequest()
-          .body(new MessageResponse("Error: Username is already taken!"));
+          .body(new MessageResponse("该账号已被注册"));
     }
 
     if (userRepository.existsByEmail(signUpRequest.getEmail())) {
       return ResponseEntity
           .badRequest()
-          .body(new MessageResponse("Error: Email is already in use!"));
+          .body(new MessageResponse("该账号已被注册"));
     }
 
     // 密码强度验证

@@ -97,22 +97,24 @@ const CouponsList: React.FC = () => {
                         {myCoupons.map((item) => (
                             <div
                                 key={item.id}
-                                className={`relative bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${item.used ? 'opacity-60 border-slate-200 dark:border-slate-700' : 'border-primary/30'}`}
+                                className={`relative bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${item.status !== 'UNUSED' ? 'opacity-60 border-slate-200 dark:border-slate-700' : 'border-primary/30'}`}
                             >
                                 <div className="flex">
-                                    <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center p-4 ${item.used ? 'bg-slate-100 dark:bg-slate-700' : 'bg-primary/10'}`}>
-                                        <span className={`text-2xl font-bold ${item.used ? 'text-slate-400' : 'text-primary'}`}>
-                                            {item.coupon?.discountType === 'PERCENTAGE'
-                                                ? `${item.coupon.discountValue}折`
-                                                : `¥${item.coupon?.discountValue}`
+                                    <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center p-4 ${item.status !== 'UNUSED' ? 'bg-slate-100 dark:bg-slate-700' : 'bg-primary/10'}`}>
+                                        <span className={`text-2xl font-bold ${item.status !== 'UNUSED' ? 'text-slate-400' : 'text-primary'}`}>
+                                            {item.coupon?.type === 'DISCOUNT'
+                                                ? `${item.coupon.value}折`
+                                                : item.coupon?.type === 'FULL_REDUCE'
+                                                    ? `¥${item.coupon?.value}`
+                                                    : '包邮'
                                             }
                                         </span>
                                     </div>
                                     <div className="flex-1 p-4">
                                         <h3 className="font-semibold text-slate-900 dark:text-white">{item.coupon?.name}</h3>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            {item.coupon?.minPurchaseAmount
-                                                ? `满¥${item.coupon.minPurchaseAmount}可用`
+                                            {item.coupon?.minAmount
+                                                ? `满¥${item.coupon.minAmount}可用`
                                                 : '无门槛'
                                             }
                                         </p>
@@ -120,7 +122,7 @@ const CouponsList: React.FC = () => {
                                             有效期至: {formatDate(item.coupon?.endTime)}
                                         </p>
                                     </div>
-                                    {item.used && (
+                                    {item.status !== 'UNUSED' && (
                                         <div className="absolute top-2 right-2 px-2 py-1 bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 text-xs rounded">
                                             已使用
                                         </div>
@@ -150,17 +152,19 @@ const CouponsList: React.FC = () => {
                                 <div className="flex">
                                     <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center p-4 bg-primary/10">
                                         <span className="text-2xl font-bold text-primary">
-                                            {coupon.discountType === 'PERCENTAGE'
-                                                ? `${coupon.discountValue}折`
-                                                : `¥${coupon.discountValue}`
+                                            {coupon.type === 'DISCOUNT'
+                                                ? `${coupon.value}折`
+                                                : coupon.type === 'FULL_REDUCE'
+                                                    ? `¥${coupon.value}`
+                                                    : '包邮'
                                             }
                                         </span>
                                     </div>
                                     <div className="flex-1 p-4">
                                         <h3 className="font-semibold text-slate-900 dark:text-white">{coupon.name}</h3>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            {coupon.minPurchaseAmount
-                                                ? `满¥${coupon.minPurchaseAmount}可用`
+                                            {coupon.minAmount
+                                                ? `满¥${coupon.minAmount}可用`
                                                 : '无门槛'
                                             }
                                         </p>

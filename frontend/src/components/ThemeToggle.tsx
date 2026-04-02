@@ -27,8 +27,8 @@ const ThemeToggle: React.FC = () => {
             type="button"
             title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
         >
-            <span className={`material-symbols-outlined block ${isDark ? 'hidden' : 'block'}`}>dark_mode</span>
-            <span className={`material-symbols-outlined hidden ${isDark ? 'block' : 'hidden'}`}>light_mode</span>
+            <span className={`material-symbols-outlined block ${isDark ? 'hidden' : 'block'}`} aria-hidden="true">dark_mode</span>
+            <span className={`material-symbols-outlined hidden ${isDark ? 'block' : 'hidden'}`} aria-hidden="true">light_mode</span>
         </button>
     );
 };
