@@ -46,24 +46,20 @@ public class OrderService {
     @Autowired
     private SystemSettingService systemSettingService;
 
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
-    }
+    @Autowired
+    private CouponService couponService;
 
-    public Page<Order> getAllOrders(@NonNull Pageable pageable) {
+    public Page<Order> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable);
     }
 
-    public List<Order> getOrdersByUserId(@NonNull Long userId) {
-        return orderRepository.findByUserId(userId);
-    }
-
-    public Page<Order> getOrdersByUserId(@NonNull Long userId, @NonNull Pageable pageable) {
+    public Page<Order> getOrdersByUserId(Long userId, Pageable pageable) {
         return orderRepository.findByUserId(userId, pageable);
     }
 
-    public Optional<Order> getOrderById(@NonNull Long id) {
-        return orderRepository.findById(id);
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("订单不存在: ID=" + id));
     }
 
     @Transactional
@@ -194,6 +190,21 @@ public class OrderService {
         }
 
         order.setItems(orderItems);
+
+        // Apply coupon discount if provided
+        BigDecimal discount = BigDecimal.ZERO;
+        if (request.getCouponId() != null) {
+            try {
+                discount = couponService.useCoupon(userId, request.getCouponId(), totalPrice, null);
+                totalPrice = totalPrice.subtract(discount);
+                if (totalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                    totalPrice = BigDecimal.ZERO;
+                }
+            } catch (RuntimeException e) {
+                // Coupon invalid - proceed without discount
+                logger.warn("优惠券应用失败: {}", e.getMessage());
+            }
+        }
         order.setTotalPrice(totalPrice);
 
         Order savedOrder = orderRepository.save(order);

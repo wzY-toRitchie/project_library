@@ -77,6 +77,7 @@ const AdminLayout: React.FC = () => {
         { path: '/admin/orders', icon: 'shopping_cart', label: '订单管理' },
         { path: '/admin/users', icon: 'group', label: '用户管理' },
         { path: '/admin/coupons', icon: 'confirmation_number', label: '优惠券管理' },
+        { path: '/admin/points-rules', icon: 'loyalty', label: '积分规则' },
         { path: '/admin/reviews', icon: 'reviews', label: '评价管理' },
         { path: '/admin/settings', icon: 'settings', label: '系统设置' },
     ];
@@ -88,6 +89,7 @@ const AdminLayout: React.FC = () => {
         '/admin/orders': 'Order Management',
         '/admin/users': 'User Management',
         '/admin/coupons': 'Coupon Management',
+        '/admin/points-rules': 'Points Rules',
         '/admin/reviews': 'Review Management',
         '/admin/settings': 'System Settings',
     };

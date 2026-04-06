@@ -4,6 +4,7 @@ import { message, Modal } from 'antd';
 import { useAuth } from '../context/AuthContext';
 import { UserRowSkeleton } from '../components/Skeleton';
 import { TableEmpty } from '../components/EmptyState';
+import { adjustUserPoints } from '../api/points';
 
 interface User {
     id: number;
@@ -15,6 +16,7 @@ interface User {
     addressCount?: number;
     role?: string;
     createTime?: string;
+    points?: number;
 }
 
 const AdminUsers: React.FC = () => {
@@ -30,6 +32,13 @@ const AdminUsers: React.FC = () => {
         fullName: '',
         phoneNumber: ''
     });
+    const [showPointsModal, setShowPointsModal] = useState(false);
+    const [targetUser, setTargetUser] = useState<User | null>(null);
+    const [pointsAdjustForm, setPointsAdjustForm] = useState({
+        points: '',
+        reason: ''
+    });
+    const [adjustingPoints, setAdjustingPoints] = useState(false);
     const { user: currentUser } = useAuth();
 
     const fetchUsers = async () => {
@@ -164,6 +173,7 @@ const AdminUsers: React.FC = () => {
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">联系方式</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">地址</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">角色</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">积分</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">注册时间</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
                             </tr>
@@ -178,7 +188,7 @@ const AdminUsers: React.FC = () => {
                                     <UserRowSkeleton />
                                 </>
                             ) : filteredUsers.length === 0 ? (
-                                <TableEmpty colSpan={7} icon="user" title="暂无用户数据" />
+                                <TableEmpty colSpan={8} icon="user" title="暂无用户数据" />
                             ) : (
                                 filteredUsers.map(target => (
                                     <tr key={target.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -208,9 +218,16 @@ const AdminUsers: React.FC = () => {
                                                 {target.role === 'ADMIN' ? '管理员' : '普通用户'}
                                             </span>
                                         </td>
+                                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-200">{target.points ?? 0}</td>
                                         <td className="px-6 py-4 text-sm text-slate-500">{target.createTime ? new Date(target.createTime).toLocaleDateString() : '-'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                                    onClick={() => { setTargetUser(target); setPointsAdjustForm({ points: '', reason: '' }); setShowPointsModal(true); }}
+                                                >
+                                                    调整积分
+                                                </button>
                                                 <button
                                                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200"
                                                     onClick={() => openEdit(target)}
@@ -281,6 +298,62 @@ const AdminUsers: React.FC = () => {
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                             value={editForm.phoneNumber}
                             onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                        />
+                    </div>
+                </div>
+            </Modal>
+
+            {/* 调整积分 Modal */}
+            <Modal
+                title={`调整用户积分 - ${targetUser?.username || ''}`}
+                open={showPointsModal}
+                onOk={async () => {
+                    if (!targetUser) return;
+                    const points = parseInt(pointsAdjustForm.points);
+                    if (isNaN(points) || points === 0) {
+                        message.error('请输入有效的积分数量（正数增加，负数扣减）');
+                        return;
+                    }
+                    if (!pointsAdjustForm.reason.trim()) {
+                        message.error('请输入调整原因');
+                        return;
+                    }
+                    setAdjustingPoints(true);
+                    try {
+                        await adjustUserPoints(targetUser.id, points, pointsAdjustForm.reason);
+                        message.success(points > 0 ? '积分增加成功' : '积分扣减成功');
+                        setShowPointsModal(false);
+                        fetchUsers();
+                    } catch {
+                        message.error('调整积分失败');
+                    } finally {
+                        setAdjustingPoints(false);
+                    }
+                }}
+                onCancel={() => setShowPointsModal(false)}
+                okText="确认调整"
+                cancelText="取消"
+                confirmLoading={adjustingPoints}
+                width={480}
+            >
+                <div className="flex flex-col gap-4 mt-4">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700">积分数量</label>
+                        <input
+                            type="number"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="正数为增加，负数为扣减"
+                            value={pointsAdjustForm.points}
+                            onChange={(e) => setPointsAdjustForm(prev => ({ ...prev, points: e.target.value }))}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700">调整原因</label>
+                        <input
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="请输入调整原因"
+                            value={pointsAdjustForm.reason}
+                            onChange={(e) => setPointsAdjustForm(prev => ({ ...prev, reason: e.target.value }))}
                         />
                     </div>
                 </div>

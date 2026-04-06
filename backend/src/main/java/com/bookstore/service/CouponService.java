@@ -1,8 +1,11 @@
 package com.bookstore.service;
 
 import com.bookstore.entity.Coupon;
+import com.bookstore.entity.CouponPointsRule;
 import com.bookstore.entity.User;
 import com.bookstore.entity.UserCoupon;
+import com.bookstore.payload.request.CouponPointsRuleRequest;
+import com.bookstore.repository.CouponPointsRuleRepository;
 import com.bookstore.repository.CouponRepository;
 import com.bookstore.repository.UserCouponRepository;
 import com.bookstore.repository.UserRepository;
@@ -11,9 +14,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -28,10 +37,25 @@ public class CouponService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private CouponPointsRuleRepository couponPointsRuleRepository;
+
+    @Autowired
+    private PointsService pointsService;
+
     /**
-     * 获取所有可用优惠券
+     * 获取所有可用优惠券（排除积分兑换券，避免与积分中心重复）
      */
     public List<Coupon> getAvailableCoupons() {
+        return couponRepository.findAvailableCoupons(LocalDateTime.now()).stream()
+                .filter(coupon -> !couponPointsRuleRepository.existsByCouponId(coupon.getId()))
+                .toList();
+    }
+
+    /**
+     * 获取所有可用优惠券（管理员用，含积分兑换券）
+     */
+    public List<Coupon> getAllAvailableCouponsWithPointsRules() {
         return couponRepository.findAvailableCoupons(LocalDateTime.now());
     }
 
@@ -57,28 +81,33 @@ public class CouponService {
     }
 
     /**
-     * 创建优惠券
+     * 创建优惠券（支持积分规则）
      */
     @Transactional
-    public Coupon createCoupon(Coupon coupon) {
-        // 生成优惠券码
+    public Coupon createCoupon(Coupon coupon, CouponPointsRuleRequest pointsRule) {
         if (coupon.getCode() == null || coupon.getCode().isEmpty()) {
             coupon.setCode(generateCouponCode());
         }
 
-        // 检查优惠券码是否已存在
         if (couponRepository.existsByCode(coupon.getCode())) {
             throw new RuntimeException("优惠券码已存在");
         }
 
-        return couponRepository.save(coupon);
+        Coupon saved = couponRepository.save(coupon);
+
+        if (pointsRule != null && pointsRule.getPointsCost() != null && pointsRule.getPointsCost() > 0) {
+            CouponPointsRule rule = new CouponPointsRule(saved, pointsRule.getPointsCost(), pointsRule.getMaxDailyRedeem());
+            couponPointsRuleRepository.save(rule);
+        }
+
+        return saved;
     }
 
     /**
-     * 更新优惠券
+     * 更新优惠券（支持积分规则）
      */
     @Transactional
-    public Coupon updateCoupon(Long id, Coupon coupon) {
+    public Coupon updateCoupon(Long id, Coupon coupon, CouponPointsRuleRequest pointsRule) {
         Coupon existing = couponRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("优惠券不存在"));
 
@@ -91,14 +120,34 @@ public class CouponService {
         existing.setEndTime(coupon.getEndTime());
         existing.setStatus(coupon.getStatus());
 
-        return couponRepository.save(existing);
+        Coupon saved = couponRepository.save(existing);
+
+        if (pointsRule != null && pointsRule.getPointsCost() != null && pointsRule.getPointsCost() > 0) {
+            if (couponPointsRuleRepository.existsByCouponId(existing.getId())) {
+                CouponPointsRule existingRule = couponPointsRuleRepository.findByCouponId(existing.getId())
+                        .orElseThrow(() -> new RuntimeException("优惠券积分规则不存在"));
+                existingRule.setPointsCost(pointsRule.getPointsCost());
+                existingRule.setMaxDailyRedeem(pointsRule.getMaxDailyRedeem());
+                couponPointsRuleRepository.save(existingRule);
+            } else {
+                CouponPointsRule rule = new CouponPointsRule(existing, pointsRule.getPointsCost(), pointsRule.getMaxDailyRedeem());
+                couponPointsRuleRepository.save(rule);
+            }
+        } else if (couponPointsRuleRepository.existsByCouponId(existing.getId())) {
+            couponPointsRuleRepository.deleteByCouponId(existing.getId());
+        }
+
+        return saved;
     }
 
     /**
-     * 删除优惠券
+     * 删除优惠券（同时删除积分规则）
      */
     @Transactional
     public void deleteCoupon(Long id) {
+        if (couponPointsRuleRepository.existsByCouponId(id)) {
+            couponPointsRuleRepository.deleteByCouponId(id);
+        }
         couponRepository.deleteById(id);
     }
 
@@ -107,7 +156,6 @@ public class CouponService {
      */
     @Transactional
     public UserCoupon claimCoupon(Long userId, Long couponId) {
-        // 检查是否已领取
         if (userCouponRepository.existsByUserIdAndCouponId(userId, couponId)) {
             throw new RuntimeException("您已领取过该优惠券");
         }
@@ -122,11 +170,9 @@ public class CouponService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-        // 创建用户优惠券
         UserCoupon userCoupon = new UserCoupon(user, coupon);
         userCouponRepository.save(userCoupon);
 
-        // 更新优惠券使用数量
         coupon.setUsedCount(coupon.getUsedCount() + 1);
         couponRepository.save(coupon);
 
@@ -134,14 +180,13 @@ public class CouponService {
     }
 
     /**
-     * 使用优惠券
+     * 使用优惠券（订单应用）
      */
     @Transactional
     public BigDecimal useCoupon(Long userId, Long userCouponId, BigDecimal orderAmount, Long orderId) {
         UserCoupon userCoupon = userCouponRepository.findById(userCouponId)
                 .orElseThrow(() -> new RuntimeException("优惠券不存在"));
 
-        // 检查是否是用户的优惠券
         if (!userCoupon.getUser().getId().equals(userId)) {
             throw new RuntimeException("这不是您的优惠券");
         }
@@ -150,13 +195,11 @@ public class CouponService {
             throw new RuntimeException("优惠券不可用");
         }
 
-        // 计算优惠金额
         BigDecimal discount = userCoupon.getCoupon().calculateDiscount(orderAmount);
         if (discount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("订单金额不满足优惠条件");
         }
 
-        // 标记为已使用
         userCoupon.markAsUsed(orderId);
         userCouponRepository.save(userCoupon);
 
@@ -164,8 +207,75 @@ public class CouponService {
     }
 
     /**
-     * 生成优惠券码
+     * 获取优惠券及其积分规则
      */
+    public Map<String, Object> getCouponWithRule(Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new RuntimeException("优惠券不存在"));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("coupon", coupon);
+        couponPointsRuleRepository.findByCouponId(couponId).ifPresent(rule -> result.put("pointsRule", rule));
+        return result;
+    }
+
+    /**
+     * 获取可积分兑换的优惠券列表
+     */
+    public List<Map<String, Object>> getAvailableRedeemCoupons() {
+        List<Coupon> availableCoupons = couponRepository.findAvailableCoupons(LocalDateTime.now());
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Coupon coupon : availableCoupons) {
+            couponPointsRuleRepository.findByCouponId(coupon.getId()).ifPresent(rule -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("coupon", coupon);
+                item.put("pointsRule", rule);
+                result.add(item);
+            });
+        }
+
+        return result;
+    }
+
+    /**
+     * 积分兑换优惠券
+     */
+    @Transactional
+    public UserCoupon redeemCouponWithPoints(Long userId, Long couponId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new RuntimeException("优惠券不存在"));
+
+        if (!coupon.isAvailable()) {
+            throw new RuntimeException("优惠券不可用");
+        }
+
+        CouponPointsRule rule = couponPointsRuleRepository.findByCouponId(couponId)
+                .orElseThrow(() -> new RuntimeException("该优惠券不支持积分兑换"));
+
+        if (user.getPoints() < rule.getPointsCost()) {
+            throw new RuntimeException("积分不足");
+        }
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        long todayRedeemed = userCouponRepository.countRedeemedByUserAndCouponToday(userId, couponId, startOfDay);
+        if (todayRedeemed >= rule.getMaxDailyRedeem()) {
+            throw new RuntimeException("今日已达兑换上限");
+        }
+
+        pointsService.deductPoints(userId, rule.getPointsCost(), "COUPON_REDEEM", "积分兑换优惠券: " + coupon.getName());
+
+        UserCoupon userCoupon = new UserCoupon(user, coupon);
+        userCouponRepository.save(userCoupon);
+
+        couponPointsRuleRepository.incrementTotalRedeemed(rule.getId());
+
+        return userCoupon;
+    }
+
     private String generateCouponCode() {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }

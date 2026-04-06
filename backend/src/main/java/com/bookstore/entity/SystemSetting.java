@@ -30,6 +30,6 @@ public class SystemSetting {
     private Double aiTemperature = 0.7;
     @Column(columnDefinition = "INT DEFAULT 2000")
     private Integer aiMaxTokens = 2000;
-    @Column(columnDefinition = "BOOLEAN DEFAULT false")
-    private Boolean aiMock = false;
+    @Column(columnDefinition = "TEXT")
+    private String aiSystemPrompt;
 }

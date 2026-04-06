@@ -59,8 +59,8 @@ public class SystemSettingService {
         if (request.getAiMaxTokens() != null) {
             settings.setAiMaxTokens(request.getAiMaxTokens());
         }
-        if (request.getAiMock() != null) {
-            settings.setAiMock(request.getAiMock());
+        if (request.getAiSystemPrompt() != null) {
+            settings.setAiSystemPrompt(request.getAiSystemPrompt());
         }
         return systemSettingRepository.save(Objects.requireNonNull(settings));
     }
@@ -73,6 +73,13 @@ public class SystemSettingService {
         settings.setSupportPhone("400-123-4567");
         settings.setLowStockThreshold(10);
         settings.setDashboardRange("6m");
+        // AI 默认设置
+        settings.setAiApiKey("");
+        settings.setAiModel("openrouter/free");
+        settings.setAiBaseUrl("https://openrouter.ai/api/v1");
+        settings.setAiTemperature(0.7);
+        settings.setAiMaxTokens(2000);
+        settings.setAiSystemPrompt("");
         return settings;
     }
 }

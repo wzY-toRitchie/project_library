@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
+import { createPayment } from '../api/payment';
 import type { Order } from '../types';
 import OrderTimeline from '../components/OrderTimeline';
 import { FALLBACK_COVER } from '../utils/constants';
@@ -11,7 +12,7 @@ const Payment: React.FC = () => {
     const navigate = useNavigate();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
-    const [paymentMethod, setPaymentMethod] = useState('wechat');
+    const [paymentMethod, setPaymentMethod] = useState('alipay');
     const [paying, setPaying] = useState(false);
     const isMounted = useRef(true);
 
@@ -45,6 +46,26 @@ const Payment: React.FC = () => {
     const handlePayment = async () => {
         if (!order) return;
         setPaying(true);
+
+        // 如果选择支付宝，调用后端 API 获取支付表单
+        if (paymentMethod === 'alipay') {
+            try {
+                const result = await createPayment(order.id);
+
+                // 将后端返回的支付表单写入页面并提交
+                const div = document.createElement('div');
+                div.innerHTML = result.paymentHtml;
+                document.body.appendChild(div);
+                (div.querySelector('form') as HTMLFormElement)?.submit();
+            } catch (error: any) {
+                console.error('Payment failed:', error);
+                message.error(error.response?.data?.error || '支付失败，请重试');
+                setPaying(false);
+            }
+            return;
+        }
+
+        // 其他支付方式（模拟支付）
         const timeoutId = setTimeout(async () => {
             try {
                 await api.patch(`/orders/${order.id}/status`, null, {

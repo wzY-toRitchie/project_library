@@ -3,6 +3,9 @@ package com.bookstore.controller;
 import com.bookstore.entity.Favorite;
 import com.bookstore.security.SecurityUtils;
 import com.bookstore.service.FavoriteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "收藏", description = "图书收藏管理接口")
 @RestController
 @RequestMapping("/api/favorites")
 public class FavoriteController {
@@ -18,9 +22,7 @@ public class FavoriteController {
     @Autowired
     private FavoriteService favoriteService;
 
-    /**
-     * 获取当前用户的收藏列表
-     */
+    @Operation(summary = "获取收藏列表", description = "获取当前用户收藏的图书列表")
     @GetMapping
     public ResponseEntity<List<Favorite>> getUserFavorites() {
         Long userId = SecurityUtils.getCurrentUserId();
@@ -28,11 +30,10 @@ public class FavoriteController {
         return ResponseEntity.ok(favorites);
     }
 
-    /**
-     * 检查是否收藏了某本图书
-     */
+    @Operation(summary = "检查收藏状态", description = "检查当前用户是否已收藏指定图书")
     @GetMapping("/check/{bookId}")
-    public ResponseEntity<Map<String, Boolean>> checkFavorite(@PathVariable Long bookId) {
+    public ResponseEntity<Map<String, Boolean>> checkFavorite(
+            @Parameter(description = "图书 ID") @PathVariable Long bookId) {
         Long userId = SecurityUtils.getCurrentUserId();
         boolean isFavorited = favoriteService.isFavorited(userId, bookId);
         Map<String, Boolean> response = new HashMap<>();
@@ -40,11 +41,10 @@ public class FavoriteController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 添加收藏
-     */
+    @Operation(summary = "添加收藏", description = "收藏指定图书")
     @PostMapping("/{bookId}")
-    public ResponseEntity<?> addFavorite(@PathVariable Long bookId) {
+    public ResponseEntity<?> addFavorite(
+            @Parameter(description = "图书 ID") @PathVariable Long bookId) {
         try {
             Long userId = SecurityUtils.getCurrentUserId();
             Favorite favorite = favoriteService.addFavorite(userId, bookId);
@@ -54,11 +54,10 @@ public class FavoriteController {
         }
     }
 
-    /**
-     * 取消收藏
-     */
+    @Operation(summary = "取消收藏", description = "取消对指定图书的收藏")
     @DeleteMapping("/{bookId}")
-    public ResponseEntity<?> removeFavorite(@PathVariable Long bookId) {
+    public ResponseEntity<?> removeFavorite(
+            @Parameter(description = "图书 ID") @PathVariable Long bookId) {
         try {
             Long userId = SecurityUtils.getCurrentUserId();
             favoriteService.removeFavorite(userId, bookId);
@@ -68,11 +67,10 @@ public class FavoriteController {
         }
     }
 
-    /**
-     * 切换收藏状态
-     */
+    @Operation(summary = "切换收藏状态", description = "如果已收藏则取消，未收藏则添加")
     @PostMapping("/toggle/{bookId}")
-    public ResponseEntity<Map<String, Boolean>> toggleFavorite(@PathVariable Long bookId) {
+    public ResponseEntity<Map<String, Boolean>> toggleFavorite(
+            @Parameter(description = "图书 ID") @PathVariable Long bookId) {
         Long userId = SecurityUtils.getCurrentUserId();
         boolean isFavorited = favoriteService.toggleFavorite(userId, bookId);
         Map<String, Boolean> response = new HashMap<>();
@@ -80,9 +78,7 @@ public class FavoriteController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 获取用户收藏数量
-     */
+    @Operation(summary = "获取收藏数量", description = "获取当前用户收藏的图书总数")
     @GetMapping("/count")
     public ResponseEntity<Map<String, Long>> getFavoriteCount() {
         Long userId = SecurityUtils.getCurrentUserId();
@@ -92,9 +88,7 @@ public class FavoriteController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 清空所有收藏
-     */
+    @Operation(summary = "清空收藏", description = "清空当前用户的所有收藏")
     @DeleteMapping
     public ResponseEntity<?> clearFavorites() {
         Long userId = SecurityUtils.getCurrentUserId();

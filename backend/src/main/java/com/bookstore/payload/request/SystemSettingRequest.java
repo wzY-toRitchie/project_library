@@ -16,5 +16,5 @@ public class SystemSettingRequest {
     private String aiBaseUrl;
     private Double aiTemperature;
     private Integer aiMaxTokens;
-    private Boolean aiMock;
+    private String aiSystemPrompt;
 }

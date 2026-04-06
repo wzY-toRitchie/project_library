@@ -18,6 +18,7 @@ const Login = React.lazy(() => import('./pages/Login'));
 const Register = React.lazy(() => import('./pages/Register'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const Payment = React.lazy(() => import('./pages/Payment'));
+const PaymentReturn = React.lazy(() => import('./pages/PaymentReturn'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const AdminBooks = React.lazy(() => import('./pages/AdminBooks'));
 const AdminOrders = React.lazy(() => import('./pages/AdminOrders'));
@@ -41,6 +42,7 @@ const About = React.lazy(() => import('./pages/About'));
 const Legal = React.lazy(() => import('./pages/Legal'));
 const FAQ = React.lazy(() => import('./pages/FAQ'));
 const AdminReviews = React.lazy(() => import('./pages/AdminReviews'));
+const AdminPointsRules = React.lazy(() => import('./pages/AdminPointsRules'));
 
 // Wrapper for MainLayout to use with Outlet
 const UserLayout = () => {
@@ -73,6 +75,7 @@ function App() {
                 <Route path="/book/:id" element={<BookDetail />} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/payment/:id" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+                <Route path="/payment-return" element={<PaymentReturn />} />
                 <Route path="/order-confirm" element={<ProtectedRoute><OrderConfirm /></ProtectedRoute>} />
                 <Route path="/contact" element={<ContactSupport />} />
                 <Route path="/search" element={<SearchResults />} />
@@ -98,6 +101,7 @@ function App() {
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="coupons" element={<AdminCoupons />} />
+                <Route path="points-rules" element={<AdminPointsRules />} />
                 <Route path="reviews" element={<AdminReviews />} />
               </Route>
 

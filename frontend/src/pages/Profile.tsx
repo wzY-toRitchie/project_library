@@ -8,6 +8,7 @@ import ReviewModal from '../components/ReviewModal';
 import FavoritesList from '../components/profile/FavoritesList';
 import BrowsingHistoryList from '../components/profile/BrowsingHistoryList';
 import CouponsList from '../components/profile/CouponsList';
+import PointsCenterSection from '../components/profile/PointsCenterSection';
 import { message } from 'antd';
 import { getErrorMessage } from '../utils/format';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -25,8 +26,8 @@ const Profile: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [userProfile, setUserProfile] = useState<User | null>(null);
-    const tabParam = searchParams.get('tab') as 'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons' | null;
-    const [activeSection, setActiveSection] = useState<'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons'>(tabParam || 'orders');
+    const tabParam = searchParams.get('tab') as 'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons' | 'points' | null;
+    const [activeSection, setActiveSection] = useState<'orders' | 'profile' | 'address' | 'password' | 'favorites' | 'history' | 'coupons' | 'points'>(tabParam || 'orders');
     useEffect(() => { if (tabParam && tabParam !== activeSection) setActiveSection(tabParam); }, [tabParam]);
 
     const [orders, setOrders] = useState<Order[]>([]);
@@ -47,7 +48,7 @@ const Profile: React.FC = () => {
     const fetchPointsHistory = useCallback(async () => { setPointsLoading(true); try { setPointsHistory(await getPointsHistory()); } catch { message.error('获取积分历史失败'); } finally { setPointsLoading(false); } }, []);
     const fetchUserPoints = useCallback(async () => { try { const d = await getUserPoints(); setUserPoints(d.points); setSignedInToday(d.signedInToday); } catch { /* ignore */ } }, []);
 
-    const handleSignIn = async () => { try { const r = await signIn(); setUserPoints(p => p + r.points); setSignedInToday(true); message.success(r.message); fetchPointsHistory(); } catch (e) { message.error((e as { response?: { data?: string } })?.response?.data || '签到失败'); } };
+    const handleSignIn = async () => { try { const r = await signIn(); fetchUserPoints(); message.success(r.message); fetchPointsHistory(); } catch (e) { message.error((e as { response?: { data?: string } })?.response?.data || '签到失败'); } };
 
     useEffect(() => { if (authUser?.id) { fetchUserProfile(); fetchUserPoints(); } }, [authUser?.id, fetchUserProfile, fetchUserPoints]);
     useEffect(() => { if (activeSection === 'orders' && authUser?.id) { fetchOrders(); fetchReviews(); } if (activeSection === 'profile') fetchPointsHistory(); }, [activeSection, authUser?.id]);
@@ -110,6 +111,7 @@ const Profile: React.FC = () => {
                     {activeSection === 'favorites' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的收藏</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您收藏的图书。</p></div><div className="p-8"><FavoritesList /></div></div>}
                     {activeSection === 'history' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">浏览历史</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看您最近浏览过的图书。</p></div><div className="p-8"><BrowsingHistoryList /></div></div>}
                     {activeSection === 'coupons' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的优惠券</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您的优惠券。</p></div><div className="p-8"><CouponsList /></div></div>}
+                    {activeSection === 'points' && <PointsCenterSection userPoints={userPoints} onPointsRefresh={fetchUserPoints} />}
                 </section>
             </div>
             <ReviewModal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} book={selectedBook} onSuccess={() => { fetchReviews(); setIsReviewModalOpen(false); }} />

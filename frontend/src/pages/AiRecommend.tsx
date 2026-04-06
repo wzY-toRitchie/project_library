@@ -9,14 +9,14 @@ import type { Book } from '../types';
 import { FALLBACK_COVER } from '../utils/constants';
 
 const QUICK_SUGGESTIONS = [
-    { label: 'Java进阶', icon: 'computer' },
-    { label: '入门Python', icon: 'code' },
-    { label: '科幻小说', icon: 'rocket_launch' },
-    { label: '经典文学', icon: 'auto_stories' },
-    { label: '人工智能', icon: 'smart_toy' },
-    { label: '心理学', icon: 'psychology' },
-    { label: '历史传记', icon: 'history_edu' },
-    { label: '理财投资', icon: 'trending_up' },
+    { label: 'Java进阶', icon: '⌨️' },
+    { label: '入门Python', icon: '🐍' },
+    { label: '科幻小说', icon: '🚀' },
+    { label: '经典文学', icon: '📚' },
+    { label: '人工智能', icon: '🤖' },
+    { label: '心理学', icon: '🧠' },
+    { label: '历史传记', icon: '📜' },
+    { label: '理财投资', icon: '📈' },
 ];
 
 interface ChatMessage {
@@ -29,6 +29,8 @@ const AiRecommend: React.FC = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [chat, setChat] = useState<ChatMessage[]>([]);
+    const [mobileTab, setMobileTab] = useState<'chat' | 'recommend'>('chat');
+    const [hoveredRec, setHoveredRec] = useState<number | null>(null);
 
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,13 @@ const AiRecommend: React.FC = () => {
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
+
+    useEffect(() => {
+        const hasRecommendations = chat.some(m => m.role === 'assistant' && m.recommendations && m.recommendations.length > 0);
+        if (hasRecommendations && window.innerWidth < 768) {
+            setMobileTab('recommend');
+        }
+    }, [chat]);
 
     const handleSend = async (text: string) => {
         const trimmed = text.trim();
@@ -61,11 +70,13 @@ const AiRecommend: React.FC = () => {
                 recommendations: res.recommendations,
             };
             setChat((prev) => [...prev, aiMsg]);
-        } catch {
-            message.error('AI推荐服务暂时不可用，请稍后重试');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { error?: string } } };
+            const errorMsg = err?.response?.data?.error || 'AI推荐服务暂时不可用，请稍后重试';
+            message.error(errorMsg);
             const errMsg: ChatMessage = {
                 role: 'assistant',
-                content: '抱歉，我现在有点累了，请稍后再试。如果问题持续，请检查网络连接。',
+                content: `抱歉，遇到了问题：${errorMsg}`,
             };
             setChat((prev) => [...prev, errMsg]);
         } finally {
@@ -103,242 +114,305 @@ const AiRecommend: React.FC = () => {
         ?.recommendations;
 
     return (
-        <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
-            {/* Header */}
-            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-lg">
-                    <span className="material-symbols-outlined text-white text-xl" aria-hidden="true">auto_awesome</span>
+        <div className="min-h-screen bg-[#faf8f5] dark:bg-[#1a1814]">
+            {/* Hero Header */}
+            <div className="relative overflow-hidden bg-[#1a365d] dark:bg-[#0f172a]">
+                <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-10 left-10 w-32 h-32 border border-[#c05621] rounded-full" />
+                    <div className="absolute bottom-10 right-20 w-24 h-24 border border-[#d69e2e] rounded-full" />
+                    <div className="absolute top-1/2 left-1/3 w-16 h-16 border border-white/30 rounded-full" />
                 </div>
-                <div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">AI 智能荐书</h1>
-                    <p className="text-xs text-slate-400">基于大语言模型 · 为你精准推荐</p>
-                </div>
-                <div className="ml-auto flex items-center gap-1.5 text-xs text-green-500">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    在线
+                <div className="relative max-w-6xl mx-auto px-6 py-12 md:py-16">
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                        <div>
+                            <p className="text-[#c05621] font-medium tracking-wider text-sm mb-2">AI 顾问</p>
+                            <h1 className="font-['Playfair_Display'] text-4xl md:text-5xl text-white font-bold leading-tight">
+                                你的专属<br className="md:hidden" />阅读顾问
+                            </h1>
+                            <p className="mt-4 text-[#94a3b8] max-w-md text-lg leading-relaxed">
+                                告诉我你的阅读偏好，我将从千本藏书中为你精选最适合的作品
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-[#c05621]/20 rounded-full">
+                                <span className="w-2 h-2 rounded-full bg-[#c05621] animate-pulse" />
+                                <span className="text-[#fb923c] text-sm font-medium">在线服务中</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Main content */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left panel — Chat */}
-                <div className="w-full md:w-[45%] flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {chat.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center px-8">
-                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6">
-                                    <span className="material-symbols-outlined text-5xl text-primary" aria-hidden="true">psychology</span>
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">
-                                    你好！我是你的AI阅读顾问 <span className="material-symbols-outlined text-base align-middle" aria-hidden="true">menu_book</span>
-                                </h3>
-                                <p className="text-slate-400 dark:text-slate-500 leading-relaxed mb-8 max-w-sm">
-                                    告诉我你喜欢什么类型的书，或者最近想读什么方向的内容，我会根据你的阅读偏好为你精准推荐。
-                                </p>
-                                <div className="w-full max-w-md">
-                                    <p className="text-xs text-slate-400 mb-3 text-left">试试这些热门话题：</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {QUICK_SUGGESTIONS.map((s) => (
-                                            <button
-                                                key={s.label}
-                                                onClick={() => handleSend(s.label)}
-                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">{s.icon}</span>
-                                                {s.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+            {/* Mobile tabs */}
+            {lastRecommendations && (
+                <div className="md:hidden sticky top-0 z-20 flex bg-white dark:bg-[#1a1814] border-b border-[#e8e0d8] dark:border-[#2d2a26]">
+                    <button
+                        onClick={() => setMobileTab('chat')}
+                        className={`flex-1 py-4 text-sm font-medium transition-all ${mobileTab === 'chat' ? 'text-[#1a365d] dark:text-[#fb923c] border-b-2 border-[#1a365d] dark:border-[#fb923c]' : 'text-[#64748b]'}`}
+                    >
+                        💬 对话
+                    </button>
+                    <button
+                        onClick={() => setMobileTab('recommend')}
+                        className={`flex-1 py-4 text-sm font-medium transition-all ${mobileTab === 'recommend' ? 'text-[#1a365d] dark:text-[#fb923c] border-b-2 border-[#1a365d] dark:border-[#fb923c]' : 'text-[#64748b]'}`}
+                    >
+                        📖 推荐 ({lastRecommendations.length})
+                    </button>
+                </div>
+            )}
 
-                        {chat.map((msg, i) => (
-                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex gap-2.5 max-w-[90%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                    {msg.role === 'assistant' && (
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center flex-shrink-0 mt-1 shadow">
-                                            <span className="material-symbols-outlined text-sm text-white" aria-hidden="true">auto_awesome</span>
-                                        </div>
-                                    )}
-                                    {msg.role === 'user' && (
-                                        <div className="w-8 h-8 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center flex-shrink-0 mt-1">
-                                            <span className="material-symbols-outlined text-sm text-slate-600 dark:text-slate-300" aria-hidden="true">person</span>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <div
-                                            className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                                                msg.role === 'user'
-                                                    ? 'bg-primary text-white rounded-br-sm'
-                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-sm'
-                                            }`}
-                                        >
-                                            {msg.content}
-                                        </div>
-                                        {msg.recommendations && msg.recommendations.length > 0 && (
-                                            <p className="text-xs text-slate-400 mt-1.5 ml-1">
-                                                <span className="material-symbols-outlined text-[14px] align-middle" aria-hidden="true">auto_stories</span> 已推荐 {msg.recommendations.length} 本书，见右侧 →
+            {/* Main Content */}
+            <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                    {/* Chat Panel */}
+                    <div className={`${mobileTab === 'chat' || !lastRecommendations ? 'flex' : 'hidden md:flex'} flex-col md:w-[420px] flex-shrink-0`}>
+                        <div className="bg-white dark:bg-[#1e1c18] rounded-2xl shadow-sm border border-[#e8e0d8] dark:border-[#2d2a26] flex flex-col h-[600px] md:h-[700px]">
+                            {/* Messages */}
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+                                {chat.length === 0 && (
+                                    <div className="h-full flex flex-col">
+                                        <div className="mb-6">
+                                            <h3 className="font-['Playfair_Display'] text-2xl text-[#1a1814] dark:text-[#faf8f5] font-bold mb-2">
+                                                开始对话
+                                            </h3>
+                                            <p className="text-[#64748b] text-sm leading-relaxed">
+                                                选择热门话题或输入你的阅读偏好
                                             </p>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {QUICK_SUGGESTIONS.map((s, i) => (
+                                                <button
+                                                    key={s.label}
+                                                    onClick={() => handleSend(s.label)}
+                                                    className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-left
+                                                        bg-[#faf8f5] dark:bg-[#262420] 
+                                                        border border-[#e8e0d8] dark:border-[#3d3a36]
+                                                        hover:border-[#c05621] dark:hover:border-[#c05621]
+                                                        hover:bg-[#fff7ed] dark:hover:bg-[#2d2520]
+                                                        transition-all duration-200 group"
+                                                    style={{ animationDelay: `${i * 50}ms` }}
+                                                >
+                                                    <span className="text-lg">{s.icon}</span>
+                                                    <span className="text-[#1a1814] dark:text-[#faf8f5] group-hover:text-[#c05621] transition-colors">
+                                                        {s.label}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-auto pt-6 border-t border-[#e8e0d8] dark:border-[#2d2a26]">
+                                            <p className="text-xs text-[#94a3b8] text-center">
+                                                例如："推荐一些适合周末放松的小说" 或 "我想学习数据结构"
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {chat.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        {msg.role === 'assistant' ? (
+                                            <div className="max-w-[90%]">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-[#1a365d] dark:bg-[#c05621] flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                        <span className="text-white text-xs font-bold">AI</span>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="bg-[#f5f0eb] dark:bg-[#262420] rounded-2xl rounded-tl-md px-4 py-3 text-sm text-[#1a1814] dark:text-[#faf8f5] leading-relaxed">
+                                                            {msg.content}
+                                                        </div>
+                                                        {msg.recommendations && msg.recommendations.length > 0 && (
+                                                            <p className="text-xs text-[#c05621] mt-2 ml-1 font-medium">
+                                                                ✓ 已为你找到 {msg.recommendations.length} 本好书
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="max-w-[80%] bg-[#1a365d] dark:bg-[#c05621] text-white rounded-2xl rounded-br-md px-4 py-3 text-sm leading-relaxed">
+                                                {msg.content}
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                            </div>
-                        ))}
+                                ))}
 
-                        {loading && (
-                            <div className="flex justify-start">
-                                <div className="flex gap-2.5">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center flex-shrink-0 mt-1 shadow">
-                                        <span className="material-symbols-outlined text-sm text-white animate-spin" aria-hidden="true">progress_activity</span>
-                                    </div>
-                                    <div className="px-4 py-3.5 rounded-2xl rounded-bl-sm bg-slate-100 dark:bg-slate-700">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                {loading && (
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-[#1a365d] dark:bg-[#c05621] flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white text-xs font-bold">AI</span>
+                                        </div>
+                                        <div className="bg-[#f5f0eb] dark:bg-[#262420] rounded-2xl rounded-tl-md px-5 py-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-[#c05621] animate-[bounce_1s_infinite_0ms]" />
+                                                <span className="w-2 h-2 rounded-full bg-[#c05621] animate-[bounce_1s_infinite_150ms]" />
+                                                <span className="w-2 h-2 rounded-full bg-[#c05621] animate-[bounce_1s_infinite_300ms]" />
+                                                <span className="text-xs text-[#64748b] ml-2">正在思考...</span>
                                             </div>
-                                            <span className="text-xs text-slate-400">AI 正在思考中…</span>
                                         </div>
                                     </div>
+                                )}
+                                <div ref={chatEndRef} />
+                            </div>
+
+                            {/* Input */}
+                            <div className="p-4 md:p-6 border-t border-[#e8e0d8] dark:border-[#2d2a26]">
+                                <form onSubmit={handleSubmit} className="flex gap-3">
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder="说说你想读什么..."
+                                        disabled={loading}
+                                        className="flex-1 px-4 py-3 bg-[#faf8f5] dark:bg-[#262420] 
+                                            border border-[#e8e0d8] dark:border-[#3d3a36]
+                                            rounded-xl text-sm text-[#1a1814] dark:text-[#faf8f5]
+                                            placeholder:text-[#94a3b8]
+                                            focus:outline-none focus:ring-2 focus:ring-[#c05621]/30 focus:border-[#c05621]
+                                            transition-all"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !input.trim()}
+                                        className="px-5 py-3 bg-[#1a365d] dark:bg-[#c05621] text-white rounded-xl
+                                            font-medium text-sm hover:bg-[#1e3a5f] dark:hover:bg-[#d97706]
+                                            disabled:opacity-40 disabled:cursor-not-allowed
+                                            transition-all duration-200"
+                                    >
+                                        发送
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recommendations Panel */}
+                    <div className={`${mobileTab === 'recommend' ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
+                        {!lastRecommendations ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-[#1e1c18] rounded-2xl border border-[#e8e0d8] dark:border-[#2d2a26]">
+                                <div className="w-20 h-20 rounded-2xl bg-[#faf8f5] dark:bg-[#262420] flex items-center justify-center mb-6">
+                                    <span className="text-4xl">📚</span>
+                                </div>
+                                <h3 className="font-['Playfair_Display'] text-xl text-[#1a1814] dark:text-[#faf8f5] font-bold mb-2">
+                                    等待你的阅读偏好
+                                </h3>
+                                <p className="text-sm text-[#64748b] max-w-xs leading-relaxed">
+                                    在左侧输入你感兴趣的书籍类型，AI将为你精心挑选
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex items-baseline justify-between">
+                                    <h2 className="font-['Playfair_Display'] text-2xl text-[#1a1814] dark:text-[#faf8f5] font-bold">
+                                        为你精选
+                                    </h2>
+                                    <span className="text-sm text-[#64748b]">
+                                        {lastRecommendations.length} 本图书
+                                    </span>
+                                </div>
+
+                                <div className="grid gap-4">
+                                    {lastRecommendations.map((rec, idx) => (
+                                        <div
+                                            key={rec.bookId}
+                                            onMouseEnter={() => setHoveredRec(rec.bookId)}
+                                            onMouseLeave={() => setHoveredRec(null)}
+                                            className="group relative bg-white dark:bg-[#1e1c18] rounded-2xl 
+                                                border border-[#e8e0d8] dark:border-[#2d2a26]
+                                                hover:border-[#c05621]/50 dark:hover:border-[#c05621]/50
+                                                hover:shadow-lg hover:shadow-[#c05621]/5
+                                                transition-all duration-300 overflow-hidden"
+                                        >
+                                            {/* Rank Badge */}
+                                            <div className="absolute top-4 left-4 z-10">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                                                    ${idx === 0 ? 'bg-[#d69e2e] text-white' : 
+                                                      idx === 1 ? 'bg-[#94a3b8] text-white' : 
+                                                      idx === 2 ? 'bg-[#c05621] text-white' : 
+                                                      'bg-[#e8e0d8] dark:bg-[#3d3a36] text-[#64748b]'}`}>
+                                                    {idx + 1}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-5 p-5 pt-6">
+                                                {/* Cover */}
+                                                <Link
+                                                    to={`/book/${rec.bookId}`}
+                                                    className="relative w-28 md:w-32 flex-shrink-0"
+                                                >
+                                                    <div className="aspect-[3/4] rounded-xl overflow-hidden bg-[#f5f0eb] dark:bg-[#262420]">
+                                                        <img
+                                                            src={rec.coverImage || FALLBACK_COVER}
+                                                            alt={rec.title}
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                            loading="lazy"
+                                                        />
+                                                    </div>
+                                                    {rec.matchScore > 0 && (
+                                                        <div className="absolute -bottom-2 -right-2 px-2 py-1 
+                                                            bg-[#1a365d] dark:bg-[#c05621] 
+                                                            text-white text-xs font-bold rounded-lg
+                                                            shadow-lg">
+                                                            {rec.matchScore}%
+                                                        </div>
+                                                    )}
+                                                </Link>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0 flex flex-col">
+                                                    <div className="flex-1">
+                                                        <Link
+                                                            to={`/book/${rec.bookId}`}
+                                                            className="font-['Playfair_Display'] text-lg font-bold text-[#1a1814] dark:text-[#faf8f5] 
+                                                                hover:text-[#c05621] dark:hover:text-[#fb923c] transition-colors line-clamp-2"
+                                                        >
+                                                            {rec.title}
+                                                        </Link>
+                                                        <p className="text-sm text-[#64748b] mt-1">
+                                                            {rec.author}
+                                                        </p>
+                                                        <p className="text-xl font-bold text-[#c05621] dark:text-[#fb923c] mt-2">
+                                                            ¥{(rec.price ?? 0).toFixed(2)}
+                                                        </p>
+                                                        
+                                                        <div className="mt-3 p-3 bg-[#faf8f5] dark:bg-[#262420] rounded-xl">
+                                                            <p className="text-sm text-[#4a5568] dark:text-[#a0aec0] leading-relaxed">
+                                                                {rec.reason}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2 mt-4">
+                                                        <Link
+                                                            to={`/book/${rec.bookId}`}
+                                                            className="flex-1 px-3 py-2.5 text-center text-sm font-medium 
+                                                                text-[#1a365d] dark:text-[#fb923c] 
+                                                                border border-[#1a365d]/20 dark:border-[#fb923c]/20
+                                                                rounded-xl hover:bg-[#1a365d]/5 dark:hover:bg-[#fb923c]/10
+                                                                transition-colors"
+                                                        >
+                                                            查看详情
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => handleAddToCart(rec)}
+                                                            className="flex-1 px-3 py-2.5 text-sm font-medium 
+                                                                bg-[#1a365d] dark:bg-[#c05621] 
+                                                                text-white rounded-xl
+                                                                hover:bg-[#1e3a5f] dark:hover:bg-[#d97706]
+                                                                transition-colors"
+                                                        >
+                                                            加入购物车
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
-                        <div ref={chatEndRef} />
                     </div>
-
-                    {/* Input area */}
-                    <div className="border-t border-slate-200 dark:border-slate-700 p-4">
-                        <form onSubmit={handleSubmit} className="flex gap-2">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                name="message"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="告诉我你想找什么类型的书..."
-                                className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                                disabled={loading}
-                            />
-                            <button
-                                type="submit"
-                                disabled={loading || !input.trim()}
-                                className="px-5 py-3 bg-gradient-to-r from-primary to-purple-500 text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-lg shadow-primary/20"
-                                aria-label="发送"
-                            >
-                                <span className="material-symbols-outlined text-xl" aria-hidden="true">send</span>
-                            </button>
-                        </form>
-                        <p className="text-xs text-slate-400 mt-2 text-center">
-                            AI 基于大语言模型生成，仅供参考。
-                        </p>
-                    </div>
-                </div>
-
-                {/* Right panel — Recommendations */}
-                <div className="hidden md:block w-[55%] overflow-y-auto bg-slate-50 dark:bg-slate-900">
-                    {!lastRecommendations ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center px-8">
-                            <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-6">
-                                <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600" aria-hidden="true">menu_book</span>
-                            </div>
-                            <h3 className="text-lg font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                                推荐结果将在这里展示
-                            </h3>
-                            <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm">
-                                在左侧对话框中描述你的阅读需求，AI 会分析你的偏好并推荐最适合你的书籍
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="p-6 space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="material-symbols-outlined text-primary" aria-hidden="true">auto_awesome</span>
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">
-                                    为你推荐以下图书
-                                </h2>
-                            </div>
-                            {lastRecommendations.map((rec, idx) => (
-                                <div
-                                    key={rec.bookId}
-                                    className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow group"
-                                >
-                                    <div className="flex gap-5 p-5">
-                                        {/* Rank + Cover */}
-                                        <div className="relative flex-shrink-0">
-                                            <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow z-10">
-                                                {idx + 1}
-                                            </div>
-                                            <Link
-                                                to={`/book/${rec.bookId}`}
-                                                className="w-32 h-44 cursor-pointer overflow-hidden rounded-xl"
-                                            >
-                                                <img
-                                                    src={
-                                                        rec.coverImage ||
-                                                        FALLBACK_COVER
-                                                    }
-                                                    alt={rec.title}
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                    loading="lazy"
-                                                    width={128}
-                                                    height={176}
-                                                />
-                                            </Link>
-                                            {rec.matchScore > 0 && (
-                                                <div className="absolute -top-1 -right-1 bg-gradient-to-r from-primary to-purple-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow">
-                                                    {rec.matchScore}%
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="flex-1 flex flex-col justify-between min-w-0">
-                                            <div>
-                                                <button
-                                                    className="font-bold text-lg text-slate-900 dark:text-white cursor-pointer hover:text-primary transition-colors line-clamp-1 text-left w-full"
-                                                    onClick={() => navigate(`/book/${rec.bookId}`)}
-                                                >
-                                                    {rec.title}
-                                                </button>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    {rec.author}
-                                                </p>
-                                                <p className="text-primary font-bold text-xl mt-2">
-                                                    ¥{rec.price.toFixed(2)}
-                                                </p>
-
-                                                {/* Reason — quote style */}
-                                                <div className="mt-3 pl-4 border-l-[3px] border-primary/50 bg-primary/5 dark:bg-primary/10 rounded-r-lg px-3 py-2.5">
-                                                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                                                        <span className="material-symbols-outlined text-base align-middle" aria-hidden="true">lightbulb</span> {rec.reason}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex items-center gap-3 mt-4">
-                                                <button
-                                                    onClick={() => navigate(`/book/${rec.bookId}`)}
-                                                    className="flex-1 px-4 py-2.5 text-sm font-medium text-primary border border-primary rounded-xl hover:bg-primary/5 transition-colors"
-                                                >
-                                                    查看详情
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAddToCart(rec)}
-                                                    className="flex-1 px-4 py-2.5 text-sm font-medium bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg" aria-hidden="true">add_shopping_cart</span>
-                                                    加入购物车
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

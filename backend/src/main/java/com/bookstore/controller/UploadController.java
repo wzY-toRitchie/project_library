@@ -3,6 +3,8 @@ package com.bookstore.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,11 +17,13 @@ import java.util.Set;
 
 @RestController
 @RequestMapping("/api/uploads")
+@Tag(name = "文件上传", description = "图书封面上传接口（管理员）")
 public class UploadController {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".webp");
 
+    @Operation(summary = "上传图书封面", description = "上传图书封面图片，支持 jpg/png/gif/webp 格式，最大 5MB")
     @PostMapping("/books")
     public ResponseEntity<Map<String, String>> uploadBookCover(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {

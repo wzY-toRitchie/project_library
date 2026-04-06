@@ -32,7 +32,7 @@ npm run dev                # 启动开发服务器 (端口 5173)
 npm run build              # 生产构建
 npm run lint               # ESLint 检查
 npm run test               # 运行 Vitest
-npm test -- --run          # 单次运行（不监听）
+npm run test -- --run      # 单次运行（不监听）
 ```
 
 ## 架构
@@ -40,42 +40,43 @@ npm test -- --run          # 单次运行（不监听）
 ### 后端 (Spring Boot 3.2.2)
 ```
 backend/src/main/java/com/bookstore/
-├── config/           # 配置类 (Security, Web, Swagger, DataInitializer)
-├── controller/       # REST API 控制器
-├── entity/           # JPA 实体
-├── repository/       # Spring Data JPA 仓库
-├── service/         # 业务逻辑层
-├── security/        # JWT 认证授权 + OAuth2
-├── payload/         # Request/Response DTO
-├── exception/       # 全局异常处理
-├── enums/           # 枚举定义
-└── utils/           # 工具类
+├── config/           # 配置类 (Security, Web, Swagger, DataInitializer, AiConfig, AlipayConfig)
+├── controller/       # 19 个 REST API 控制器
+├── entity/           # 14 个 JPA 实体
+├── repository/       # 13 个 Spring Data JPA 仓库
+├── service/          # 16 个业务逻辑层
+├── security/         # JWT 认证 (AuthTokenFilter, JwtUtils, AuthEntryPointJwt) + OAuth2 + SecurityUtils
+├── payload/          # Request/Response DTO
+├── exception/        # 全局异常处理 (GlobalExceptionHandler + 自定义异常)
+├── enums/            # 枚举定义 (OrderStatus, NotificationType)
+└── utils/            # 工具类
 ```
 
-- **认证**: JWT 无状态认证 (AuthTokenFilter) + Spring Security
+- **认证**: JWT 无状态认证 (AuthTokenFilter) + Spring Security，支持登录失败锁定
 - **第三方登录**: 支持 GitHub、Gitee OAuth2 登录
-- **AI 推荐**: OpenRouter 大语言模型集成
+- **AI 推荐**: OpenRouter 大语言模型集成 (AiConfig)
+- **支付**: 支付宝 SDK 集成，支持电脑网站支付（沙箱环境）
 - **密码**: BCrypt 加密
 - **API 文档**: Swagger/OpenAPI (`/swagger-ui/index.html`)
-- **数据初始化**: 首次启动自动初始化示例数据
+- **数据初始化**: 首次启动自动初始化示例数据 (DataInitializer)，包含 10 个用户、10 个分类、45+ 本图书和 9 个示例订单
 
-### 前端 (React 19 + TypeScript + Vite 7)
+### 前端 (React 19 + TypeScript + Vite 7 + Ant Design)
 ```
 frontend/src/
 ├── api/             # Axios 封装 + 各模块 API
-├── components/     # 公共组件
-│   ├── charts/     # 图表组件
-│   ├── home/       # 主页板块组件
-│   └── profile/    # 个人中心子组件
-├── context/        # React Context (Auth, Cart)
-├── pages/          # 页面组件
-├── types/          # TypeScript 类型定义
-└── utils/          # 工具函数
+├── components/      # 公共组件
+│   ├── charts/      # 图表组件 (echarts-for-react)
+│   ├── home/        # 主页板块组件
+│   └── profile/     # 个人中心子组件
+├── context/         # React Context (Auth, Cart)
+├── pages/           # 页面组件（路由懒加载）
+├── types/           # TypeScript 类型定义
+└── utils/           # 工具函数
 ```
 
 - **样式**: Tailwind CSS + Editorial 杂志风格 (Playfair Display + DM Sans)
 - **状态**: React Context API (Auth, Cart)
-- **路由**: React Router v6 (页面懒加载)
+- **路由**: React Router v7
 
 ## 核心 API
 
@@ -102,8 +103,11 @@ frontend/src/
 ## 安全
 
 - JWT 放在 Authorization 请求头: `Bearer <token>`
-- 公开接口: `/api/auth/**`, `/api/books` (GET), `/api/categories` (GET), `/api/uploads/**`
-- 管理后台接口需 `ROLE_ADMIN` 权限
+- 公开接口: `/api/auth/**`, `/api/books` (GET), `/api/categories` (GET), `/api/reviews` (GET), `/api/coupons` (GET), `/api/settings` (GET), `/api/uploads/**`, `/swagger-ui/**`, `/v3/api-docs/**`, `/error`
+- 管理后台接口需 `ROLE_ADMIN` 权限（上传、图书 CRUD、分类、系统设置、导出、Dashboard）
+- 登录失败锁定: `LoginAttemptService` 使用内存 Map 记录失败次数，达到上限后锁定指定时间
+- `@EnableMethodSecurity` 已启用，支持 `@PreAuthorize` 注解
+- 安全校验在控制器层手动通过 `SecurityUtils.isAdmin()` / `SecurityUtils.getCurrentUserUsername()` 执行
 
 ## OAuth2 配置
 
@@ -147,7 +151,7 @@ app.alipay.sandbox=true
 
 | 接口 | 说明 |
 |------|------|
-| `POST /api/payment/create/{orderId}` | 创建支付订单 |
+| `POST /api/payment/create/{orderId}` | 创建支付订单，返回支付表单 URL |
 | `GET /api/payment/status/{orderId}` | 查询支付状态 |
 | `POST /api/payment/notify` | 异步回调通知 |
 | `POST /api/payment/refund/{orderId}` | 退款 |
@@ -156,5 +160,9 @@ app.alipay.sandbox=true
 
 - 后端热重载: Spring DevTools
 - 前端热重载: Vite HMR
-- CORS 配置在 `WebConfig`
+- CORS 配置在 `WebConfig` + `SecurityConfig` 的默认 CorsFilter
 - 全局异常处理在 `GlobalExceptionHandler`
+- 订单创建使用 `bookRepository.decreaseStock()` 原子扣减库存防止超卖
+- 上传图片路径依赖 `System.getProperty("user.dir")`，部署时需配置绝对路径
+- `DataInitializer` 每次启动都会执行初始化数据检查，但没有 `@Profile("dev")` 保护
+- `OrderItem` 使用 `@Data` Lombok 注解，`toString()` 和 `hashCode()` 可能因双向关系导致栈溢出

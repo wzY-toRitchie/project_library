@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { message, Modal } from 'antd';
 import api from '../api';
 import { getAllCoupons, createCoupon, updateCoupon, deleteCoupon } from '../api/coupons';
@@ -14,11 +14,16 @@ interface CouponForm {
     startTime: string;
     endTime: string;
     status: string;
+    // 积分兑换规则
+    enablePointsRedeem: boolean;
+    pointsCost: string;
+    maxDailyRedeem: string;
 }
 
 const emptyForm: CouponForm = {
     name: '', code: '', type: 'FULL_REDUCE', value: '', minAmount: '0',
     totalCount: '100', startTime: '', endTime: '', status: 'ACTIVE',
+    enablePointsRedeem: false, pointsCost: '', maxDailyRedeem: '1',
 };
 
 const AdminCoupons: React.FC = () => {
@@ -29,6 +34,7 @@ const AdminCoupons: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Coupon | null>(null);
     const [form, setForm] = useState<CouponForm>(emptyForm);
+    const [pointsRule, setPointsRule] = useState<{ pointsCost: number } | null>(null);
 
     const fetchCoupons = useCallback(async () => {
         setLoading(true);
@@ -44,6 +50,7 @@ const AdminCoupons: React.FC = () => {
     const openCreate = () => {
         setEditing(null);
         setForm({ ...emptyForm, startTime: new Date().toISOString().slice(0, 16), endTime: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 16) });
+        setPointsRule(null);
         setShowModal(true);
     };
 
@@ -53,14 +60,29 @@ const AdminCoupons: React.FC = () => {
             name: c.name, code: c.code, type: c.type, value: String(c.value),
             minAmount: String(c.minAmount || 0), totalCount: String(c.totalCount),
             startTime: c.startTime?.slice(0, 16) || '', endTime: c.endTime?.slice(0, 16) || '', status: c.status,
+            enablePointsRedeem: false, pointsCost: '', maxDailyRedeem: '1',
         });
+        setPointsRule(null);
+        // 加载积分规则
+        api.get(`/coupons/${c.id}`).then(res => {
+            if (res.data.pointsRule) {
+                setPointsRule(res.data.pointsRule);
+                setForm(prev => ({
+                    ...prev,
+                    enablePointsRedeem: true,
+                    pointsCost: String(res.data.pointsRule.pointsCost),
+                    maxDailyRedeem: String(res.data.pointsRule.maxDailyRedeem || 1),
+                }));
+            }
+        }).catch(() => {});
         setShowModal(true);
     };
 
     const handleSave = async () => {
         if (!form.name || !form.value) { message.error('名称和面值不能为空'); return; }
         setSaving(true);
-        const payload = {
+
+        const payload: Record<string, unknown> = {
             name: form.name, code: form.code || undefined, type: form.type,
             value: Number(form.value), minAmount: Number(form.minAmount) || 0,
             totalCount: Number(form.totalCount) || 100,
@@ -68,9 +90,22 @@ const AdminCoupons: React.FC = () => {
             endTime: form.endTime ? new Date(form.endTime).toISOString() : new Date(Date.now() + 90 * 86400000).toISOString(),
             status: form.status,
         };
+
+        if (form.enablePointsRedeem && form.pointsCost && Number(form.pointsCost) > 0) {
+            payload.pointsRule = {
+                pointsCost: Number(form.pointsCost),
+                maxDailyRedeem: Number(form.maxDailyRedeem) || 1,
+            };
+        }
+
         try {
-            if (editing) { await updateCoupon(editing.id, payload); message.success('优惠券已更新'); }
-            else { await createCoupon(payload as any); message.success('优惠券已创建'); }
+            if (editing) {
+                await updateCoupon(editing.id, payload as any);
+                message.success('优惠券已更新');
+            } else {
+                await createCoupon(payload as any);
+                message.success('优惠券已创建');
+            }
             setShowModal(false);
             fetchCoupons();
         } catch { message.error('保存失败'); }
@@ -145,7 +180,7 @@ const AdminCoupons: React.FC = () => {
             {/* Create/Edit Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowModal(false)}>
-                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-lg mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-lg mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{editing ? '编辑优惠券' : '新建优惠券'}</h3>
                         </div>
@@ -181,6 +216,31 @@ const AdminCoupons: React.FC = () => {
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">过期时间</label>
                                 <input type="datetime-local" value={form.endTime} onChange={e => setForm(p => ({ ...p, endTime: e.target.value }))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-1 focus:ring-primary focus:border-primary" />
                             </div>
+
+                            {/* 积分兑换规则 */}
+                            <div className="col-span-2 mt-2 border-t border-slate-200 dark:border-slate-700 pt-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.enablePointsRedeem}
+                                        onChange={e => setForm(p => ({ ...p, enablePointsRedeem: e.target.checked }))}
+                                        className="rounded border-slate-300 text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">启用积分兑换</span>
+                                </label>
+                            </div>
+                            {form.enablePointsRedeem && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">积分价格</label>
+                                        <input type="number" value={form.pointsCost} onChange={e => setForm(p => ({ ...p, pointsCost: e.target.value }))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-1 focus:ring-primary focus:border-primary" placeholder="需要多少积分兑换" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">每日兑换限制</label>
+                                        <input type="number" value={form.maxDailyRedeem} onChange={e => setForm(p => ({ ...p, maxDailyRedeem: e.target.value }))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-1 focus:ring-primary focus:border-primary" />
+                                    </div>
+                                </>
+                            )}
                         </div>
                         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
                             <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">取消</button>

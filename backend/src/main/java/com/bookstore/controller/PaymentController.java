@@ -4,6 +4,7 @@ import com.bookstore.entity.Order;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.repository.OrderRepository;
+import com.bookstore.repository.UserRepository;
 import com.bookstore.service.AlipayService;
 import com.bookstore.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.math.BigDecimal;
 
 @Tag(name = "支付", description = "支付宝支付接口")
 @RestController
@@ -27,12 +29,18 @@ public class PaymentController {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PaymentController.class);
+
     @Operation(summary = "创建支付宝支付", description = "为订单创建支付宝支付链接")
     @PostMapping("/create/{orderId}")
     public ResponseEntity<Map<String, String>> createPayment(
             @Parameter(description = "订单 ID") @PathVariable Long orderId) {
         try {
-            User currentUser = SecurityUtils.getCurrentUser();
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            User currentUser = userRepository.findById(currentUserId).orElse(null);
             if (currentUser == null) {
                 return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
             }
@@ -82,6 +90,7 @@ public class PaymentController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            logger.error("查询支付状态失败", e);
             return ResponseEntity.status(500).body(Map.of("error", "查询失败: " + e.getMessage()));
         }
     }
@@ -117,6 +126,7 @@ public class PaymentController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            logger.error("关闭订单失败", e);
             return ResponseEntity.status(500).body(Map.of("error", "关闭失败: " + e.getMessage(), "success", false));
         }
     }
@@ -132,9 +142,9 @@ public class PaymentController {
                 return ResponseEntity.badRequest().body(Map.of("error", "订单不存在"));
             }
 
-            java.math.BigDecimal refundAmount = amount.isEmpty() || "0".equals(amount)
-                ? order.getTotalAmount()
-                : new java.math.BigDecimal(amount);
+            BigDecimal refundAmount = amount.isEmpty() || "0".equals(amount)
+                ? order.getTotalPrice()
+                : new BigDecimal(amount);
 
             boolean success = alipayService.refund(orderId, refundAmount);
 
@@ -145,9 +155,8 @@ public class PaymentController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            logger.error("退款失败", e);
             return ResponseEntity.status(500).body(Map.of("error", "退款失败: " + e.getMessage(), "success", false));
         }
     }
-
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PaymentController.class);
 }

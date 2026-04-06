@@ -13,7 +13,15 @@ interface AdminSettingsState {
     aiBaseUrl: string;
     aiTemperature: number;
     aiMaxTokens: number;
-    aiMock: boolean;
+    aiSystemPrompt: string;
+}
+
+interface ApiTestResult {
+    success: boolean;
+    message: string;
+    responseTime?: number;
+    model?: string;
+    baseUrl?: string;
 }
 
 const defaultSettings: AdminSettingsState = {
@@ -27,7 +35,7 @@ const defaultSettings: AdminSettingsState = {
     aiBaseUrl: 'https://openrouter.ai/api/v1',
     aiTemperature: 0.7,
     aiMaxTokens: 2000,
-    aiMock: false,
+    aiSystemPrompt: '',
 };
 
 const AdminSettings: React.FC = () => {
@@ -35,6 +43,8 @@ const AdminSettings: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showApiKey, setShowApiKey] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<ApiTestResult | null>(null);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -79,6 +89,27 @@ const AdminSettings: React.FC = () => {
             message.error('恢复默认设置失败');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleTestConnection = async () => {
+        setTesting(true);
+        setTestResult(null);
+        try {
+            const response = await api.post<ApiTestResult>('/ai/test-connection');
+            setTestResult(response.data);
+            if (response.data.success) {
+                message.success('API 连接测试成功');
+            } else {
+                message.error('API 连接测试失败: ' + response.data.message);
+            }
+        } catch (error) {
+            console.error('API test failed:', error);
+            const errorMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '连接测试失败';
+            setTestResult({ success: false, message: errorMsg });
+            message.error(errorMsg);
+        } finally {
+            setTesting(false);
         }
     };
 
@@ -200,15 +231,80 @@ const AdminSettings: React.FC = () => {
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">最大 Token</label>
                             <input className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white" type="number" min="100" max="8000" value={settings.aiMaxTokens} onChange={(e) => setSettings(prev => ({ ...prev, aiMaxTokens: Number(e.target.value) || 2000 }))} disabled={loading} />
                         </div>
-                        {/* Mock Mode */}
+                        {/* System Prompt */}
                         <div className="flex flex-col gap-2 lg:col-span-2">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Mock 模式（开发/测试用）</label>
-                            <button type="button" onClick={() => setSettings(prev => ({ ...prev, aiMock: !prev.aiMock }))} disabled={loading}
-                                className={`w-14 h-11 rounded-full transition-colors ${settings.aiMock ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                                <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.aiMock ? 'translate-x-7' : 'translate-x-1'}`} />
-                            </button>
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">系统提示词</label>
+                            <textarea
+                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white font-mono"
+                                rows={8}
+                                value={settings.aiSystemPrompt}
+                                onChange={(e) => setSettings(prev => ({ ...prev, aiSystemPrompt: e.target.value }))}
+                                disabled={loading}
+                                placeholder="留空使用默认提示词。可用变量：{bookList} - 书库列表"
+                            />
+                            <p className="text-xs text-slate-500">
+                                提示：留空将使用默认提示词。可用变量 <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">{'{bookList}'}</code> 会被替换为书库列表。
+                                提示词需要求 AI 返回 JSON 格式：{'{"reply":"...","summary":"...","recommendations":[{"title":"...","author":"...","reason":"...","matchScore":90}]}'}
+                            </p>
                         </div>
                     </div>
+                </div>
+
+                {/* API 连接测试 */}
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="material-symbols-outlined text-primary" aria-hidden="true">speed</span>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">API 连接测试</h3>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleTestConnection}
+                            disabled={testing || loading || !settings.aiApiKey}
+                            className="px-6 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold shadow-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {testing ? (
+                                <>
+                                    <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                                    测试中...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined text-lg">play_arrow</span>
+                                    测试连接
+                                </>
+                            )}
+                        </button>
+                        {testResult && (
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${testResult.success ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
+                                <span className="material-symbols-outlined text-lg">
+                                    {testResult.success ? 'check_circle' : 'error'}
+                                </span>
+                                <span className="text-sm font-medium">
+                                    {testResult.success 
+                                        ? `连接成功 (${testResult.responseTime}ms)` 
+                                        : testResult.message}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    {testResult?.success && (
+                        <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-slate-500">模型：</span>
+                                    <span className="text-slate-900 dark:text-white font-medium">{testResult.model}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500">响应时间：</span>
+                                    <span className="text-slate-900 dark:text-white font-medium">{testResult.responseTime}ms</span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-slate-500">API 地址：</span>
+                                    <span className="text-slate-900 dark:text-white font-medium">{testResult.baseUrl}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap gap-3">

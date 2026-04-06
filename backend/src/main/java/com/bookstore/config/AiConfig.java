@@ -9,7 +9,7 @@ import lombok.Data;
 @ConfigurationProperties(prefix = "app.ai.openrouter")
 public class AiConfig {
     private String apiKey = "";
-    private String baseUrl = "https://api.deepseek.com";
-    private String model = "deepseek-chat";
-    private boolean mock = true;
+    private String baseUrl = "https://openrouter.ai/api/v1";
+    private String model = "openrouter/free";
+    private boolean mock = false;
 }

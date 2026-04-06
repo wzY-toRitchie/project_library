@@ -1,0 +1,299 @@
+{
+  "jobs": 3,
+  "tasks": [
+    {
+      "id": "java-core",
+      "prompt": "Book cover design for 'Java Core Technology' by Cay S. Horstmann. Professional programming book cover with Java coffee cup icon, modern tech aesthetic, blue and orange color scheme, clean typography, 2:3 aspect ratio book cover",
+      "image": "frontend/public/covers/java-core.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "csapp",
+      "prompt": "Book cover design for 'Computer Systems: A Programmer's Perspective' by Randal E. Bryant. Technical computer science textbook cover, showing CPU/processor circuit design, deep blue tones, professional academic style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/csapp.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "three-body",
+      "prompt": "Book cover design for 'The Three-Body Problem' by Liu Cixin. Chinese sci-fi masterpiece, cosmic background with three suns, dark space theme, mysterious and epic atmosphere, cinematic sci-fi style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/three-body.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "hundred-years",
+      "prompt": "Book cover design for 'One Hundred Years of Solitude' by Gabriel Garcia Marquez. Magical realism novel, Latin American art style, tropical butterflies, golden warm tones, literary classic aesthetic, 2:3 aspect ratio",
+      "image": "frontend/public/covers/hundred-years.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "ming-dynasty",
+      "prompt": "Book cover design for 'Those Things About Ming Dynasty'. Chinese history book, ancient Chinese palace architecture, traditional ink wash painting style, red and gold colors, imperial aesthetic, 2:3 aspect ratio",
+      "image": "frontend/public/covers/ming-dynasty.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "alive",
+      "prompt": "Book cover design for 'To Live' by Yu Hua. Chinese literary fiction, rural China landscape, minimalist style, earth tones, emotional and poignant atmosphere, 2:3 aspect ratio",
+      "image": "frontend/public/covers/alive.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "intro-algorithms",
+      "prompt": "Book cover design for 'Introduction to Algorithms' by Cormen. Classic algorithms textbook, mathematical symbols and binary code, dark academic blue, professional technical style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/intro-algorithms.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "sapiens",
+      "prompt": "Book cover design for 'Sapiens: A Brief History of Humankind' by Yuval Noah Harari. Human evolution timeline, from ancient to modern, earth and sky colors, epic historical scope, 2:3 aspect ratio",
+      "image": "frontend/public/covers/sapiens.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "wanli",
+      "prompt": "Book cover design for '1587, A Year of No Significance' by Ray Huang. Ming Dynasty history, traditional Chinese painting style, imperial court scene, scholarly and refined, 2:3 aspect ratio",
+      "image": "frontend/public/covers/wanli.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "foundation",
+      "prompt": "Book cover design for 'Foundation' by Isaac Asimov. Galactic empire sci-fi, futuristic cityscape, cosmic stars, golden age sci-fi aesthetic, epic space opera, 2:3 aspect ratio",
+      "image": "frontend/public/covers/foundation.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "python-crash",
+      "prompt": "Book cover design for 'Python Crash Course' by Eric Matthes. Python programming beginner book, friendly python snake mascot, yellow and blue colors, approachable tech style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/python-crash.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "clean-code",
+      "prompt": "Book cover design for 'Clean Code' by Robert C. Martin. Software engineering best practices, code refactoring theme, green and white colors, clean minimalist design, 2:3 aspect ratio",
+      "image": "frontend/public/covers/clean-code.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "design-patterns",
+      "prompt": "Book cover design for 'Design Patterns' by Gang of Four. Object-oriented design patterns, UML diagrams style, blue and gray professional, classic software architecture book, 2:3 aspect ratio",
+      "image": "frontend/public/covers/design-patterns.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "brief-history",
+      "prompt": "Book cover design for 'A Brief History of Time' by Stephen Hawking. Physics and cosmology, black hole and stars, deep space blue, scientific wonder, 2:3 aspect ratio",
+      "image": "frontend/public/covers/brief-history.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "white-night",
+      "prompt": "Book cover design for 'White Night' by Keigo Higashino. Japanese mystery thriller, dark noir atmosphere, shadow and light contrast, suspenseful mood, 2:3 aspect ratio",
+      "image": "frontend/public/covers/white-night.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "convenience-store",
+      "prompt": "Book cover design for 'The Convenience Store of Lost Souls' by Keigo Higashino. Warm and healing story, cozy convenience store at night, soft warm lighting, heartwarming atmosphere, 2:3 aspect ratio",
+      "image": "frontend/public/covers/convenience-store.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "shiji",
+      "prompt": "Book cover design for 'Records of the Grand Historian' by Sima Qian. Ancient Chinese historical classic, bamboo scroll texture, traditional calligraphy, scholarly and dignified, 2:3 aspect ratio",
+      "image": "frontend/public/covers/shiji.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "qinhan",
+      "prompt": "Book cover design for 'History of Qin and Han' by Lv Simian. Chinese ancient history, terracotta warrior silhouette, earth tones, historical gravitas, 2:3 aspect ratio",
+      "image": "frontend/public/covers/qinhan.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "hitchhiker",
+      "prompt": "Book cover design for 'The Hitchhiker's Guide to the Galaxy' by Douglas Adams. Whimsical sci-fi comedy, space and towel, retro-futuristic style, playful and humorous, 2:3 aspect ratio",
+      "image": "frontend/public/covers/hitchhiker.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "ml-action",
+      "prompt": "Book cover design for 'Machine Learning in Action' by Peter Harrington. AI and machine learning, neural network visualization, data flow graphics, modern tech blue, 2:3 aspect ratio",
+      "image": "frontend/public/covers/ml-action.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "effective-java",
+      "prompt": "Book cover design for 'Effective Java' by Joshua Bloch. Java best practices programming book, coffee cup icon with code elements, professional orange and brown tones, 2:3 aspect ratio",
+      "image": "frontend/public/covers/effective-java.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "spring-boot",
+      "prompt": "Book cover design for 'Spring Boot in Action' by Craig Walls. Spring framework programming book, green spring leaf logo, modern enterprise Java style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/spring-boot.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "network-top-down",
+      "prompt": "Book cover design for 'Computer Networking: A Top-Down Approach' by Kurose. Network protocols and layers, connected nodes visualization, technical blue style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/network-top-down.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "modern-os",
+      "prompt": "Book cover design for 'Modern Operating Systems' by Tanenbaum. Operating system concepts, process and memory visualization, technical academic style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/modern-os.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "db-concepts",
+      "prompt": "Book cover design for 'Database System Concepts' by Silberschatz. Database and SQL, structured data visualization, professional academic blue, 2:3 aspect ratio",
+      "image": "frontend/public/covers/db-concepts.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "hackers-painters",
+      "prompt": "Book cover design for 'Hackers and Painters' by Paul Graham. Startup and programming essays, creative tech entrepreneur vibe, bold and innovative, 2:3 aspect ratio",
+      "image": "frontend/public/covers/hackers-painters.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "kite-runner",
+      "prompt": "Book cover design for 'The Kite Runner' by Khaled Hosseini. Afghan kite flying scene, emotional and nostalgic, warm sunset colors, literary fiction style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/kite-runner.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "ordinary-world",
+      "prompt": "Book cover design for 'Ordinary World' by Lu Yao. Chinese rural life, yellow earth plateau, realistic Chinese literary style, earth tones, 2:3 aspect ratio",
+      "image": "frontend/public/covers/ordinary-world.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "fortress-besieged",
+      "prompt": "Book cover design for 'Fortress Besieged' by Qian Zhongshu. Chinese literary classic, vintage 1940s Shanghai style, satirical and witty mood, 2:3 aspect ratio",
+      "image": "frontend/public/covers/fortress-besieged.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "dream-red-mansion",
+      "prompt": "Book cover design for 'Dream of the Red Chamber' by Cao Xueqin. Chinese classical literature masterpiece, traditional garden scene, elegant ink painting style, red and gold, 2:3 aspect ratio",
+      "image": "frontend/public/covers/dream-red-mansion.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "courage-disliked",
+      "prompt": "Book cover design for 'The Courage to Be Disliked' by Ichiro Kishimi. Adlerian psychology, freedom and self-acceptance, clean modern design, light and airy, 2:3 aspect ratio",
+      "image": "frontend/public/covers/courage-disliked.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "guns-germs",
+      "prompt": "Book cover design for 'Guns, Germs, and Steel' by Jared Diamond. Human civilization history, globe and historical artifacts, academic non-fiction style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/guns-germs.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "short-history",
+      "prompt": "Book cover design for 'A Short History of Nearly Everything' by Bill Bryson. Science and nature exploration, atoms to galaxies, colorful scientific illustrations, 2:3 aspect ratio",
+      "image": "frontend/public/covers/short-history.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "china-politics",
+      "prompt": "Book cover design for 'The Gain and Loss of Chinese Political Systems' by Qian Mu. Chinese political history, traditional scholarly style, academic and authoritative, 2:3 aspect ratio",
+      "image": "frontend/public/covers/china-politics.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "dune",
+      "prompt": "Book cover design for 'Dune' by Frank Herbert. Desert planet Arrakis, giant sandworm, epic sci-fi atmosphere, orange sand and blue sky, cinematic style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/dune.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "foundation-empire",
+      "prompt": "Book cover design for 'Foundation and Empire' by Isaac Asimov. Galactic empire collapse, futuristic architecture in space, golden age sci-fi aesthetic, 2:3 aspect ratio",
+      "image": "frontend/public/covers/foundation-empire.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "snow-crash",
+      "prompt": "Book cover design for 'Snow Crash' by Neal Stephenson. Cyberpunk virtual reality, neon lights and digital matrix, dark futuristic style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/snow-crash.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "social-psychology",
+      "prompt": "Book cover design for 'Social Psychology' by David Myers. Psychology textbook, human behavior and group dynamics, professional academic design, 2:3 aspect ratio",
+      "image": "frontend/public/covers/social-psychology.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "willpower",
+      "prompt": "Book cover design for 'The Willpower Instinct' by Kelly McGonigal. Self-control and neuroscience, brain visualization, motivational and scientific, 2:3 aspect ratio",
+      "image": "frontend/public/covers/willpower.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "economics-principles",
+      "prompt": "Book cover design for 'Principles of Economics' by N. Gregory Mankiw. Economics textbook, supply and demand curves, professional academic style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/economics-principles.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "principles",
+      "prompt": "Book cover design for 'Principles' by Ray Dalio. Business and life principles, systematic thinking, professional and authoritative design, 2:3 aspect ratio",
+      "image": "frontend/public/covers/principles.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "sophies-world",
+      "prompt": "Book cover design for 'Sophie's World' by Jostein Gaarder. Philosophy history through fiction, mysterious letters and world wonder, whimsical and thoughtful, 2:3 aspect ratio",
+      "image": "frontend/public/covers/sophies-world.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "being-time",
+      "prompt": "Book cover design for 'Being and Time' by Martin Heidegger. Existential philosophy, abstract and profound, dark and contemplative, scholarly aesthetic, 2:3 aspect ratio",
+      "image": "frontend/public/covers/being-time.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "story-of-art",
+      "prompt": "Book cover design for 'The Story of Art' by E.H. Gombrich. Art history overview, Renaissance painting elements, elegant and cultured design, 2:3 aspect ratio",
+      "image": "frontend/public/covers/story-of-art.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "non-designers",
+      "prompt": "Book cover design for 'The Non-Designer's Design Book' by Robin Williams. Design principles guide, typography and layout elements, colorful and accessible, 2:3 aspect ratio",
+      "image": "frontend/public/covers/non-designers.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "teachers-advice",
+      "prompt": "Book cover design for 'Advice to Teachers' by Sukhomlinsky. Education classic, classroom and learning scene, warm and inspiring, educational aesthetic, 2:3 aspect ratio",
+      "image": "frontend/public/covers/teachers-advice.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "educational-psychology",
+      "prompt": "Book cover design for 'Educational Psychology' by Anne Slavin. Psychology of learning, student development, professional academic textbook style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/educational-psychology.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "7-habits",
+      "prompt": "Book cover design for 'The 7 Habits of Highly Effective People' by Stephen Covey. Self-improvement and leadership, mountain climbing metaphor, inspirational and professional, 2:3 aspect ratio",
+      "image": "frontend/public/covers/7-habits.png",
+      "ar": "2:3"
+    },
+    {
+      "id": "good-to-great",
+      "prompt": "Book cover design for 'Good to Great' by Jim Collins. Business excellence research, flywheel concept, corporate professional style, 2:3 aspect ratio",
+      "image": "frontend/public/covers/good-to-great.png",
+      "ar": "2:3"
+    }
+  ]
+}

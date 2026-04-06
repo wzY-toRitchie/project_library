@@ -16,6 +16,7 @@ const navItems = [
     { key: 'favorites', label: '我的收藏', icon: 'favorite' },
     { key: 'history', label: '浏览历史', icon: 'history' },
     { key: 'coupons', label: '我的优惠券', icon: 'confirmation_number' },
+    { key: 'points', label: '我的积分', icon: 'stars' },
 ];
 
 const ProfileSidebar: React.FC<ProfileSidebarProps> = ({

@@ -1,23 +1,26 @@
 package com.bookstore.payload.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
+@Schema(description = "注册请求")
 public class SignupRequest {
+    @Schema(description = "用户名", example = "user123")
     @NotBlank
     @Size(min = 3, max = 20)
     private String username;
 
+    @Schema(description = "邮箱", example = "user@example.com")
     @NotBlank
     @Size(max = 50)
     @Email
     private String email;
 
-    private Set<String> role;
-
+    @Schema(description = "密码（至少8位，包含大写字母、小写字母和数字）")
     @NotBlank
     @Size(min = 8, max = 40)
     private String password;
@@ -44,13 +47,5 @@ public class SignupRequest {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public Set<String> getRole() {
-      return this.role;
-    }
-
-    public void setRole(Set<String> role) {
-      this.role = role;
     }
 }

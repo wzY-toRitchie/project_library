@@ -6,6 +6,7 @@ import java.util.List;
 @Data
 public class OrderCreateRequest {
     private List<OrderItemRequest> items;
+    private Long couponId;
 
     @Data
     public static class OrderItemRequest {

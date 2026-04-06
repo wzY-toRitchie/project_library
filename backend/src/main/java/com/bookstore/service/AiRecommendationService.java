@@ -30,22 +30,26 @@ public class AiRecommendationService {
     private final FavoriteRepository favoriteRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * AI 推荐图书
+     */
     public AiRecommendResponse recommend(String userMessage) {
         var settings = settingService.getSettings();
-        boolean mock = settings.getAiMock() != null ? settings.getAiMock() : aiConfig.isMock();
-        if (mock) {
-            return mockRecommend(userMessage);
-        }
-        try {
-            String apiKey = (settings.getAiApiKey() != null && !settings.getAiApiKey().isEmpty())
-                ? settings.getAiApiKey() : aiConfig.getApiKey();
-            String baseUrl = (settings.getAiBaseUrl() != null && !settings.getAiBaseUrl().isEmpty())
-                ? settings.getAiBaseUrl() : aiConfig.getBaseUrl();
-            String model = (settings.getAiModel() != null && !settings.getAiModel().isEmpty())
-                ? settings.getAiModel() : aiConfig.getModel();
-            double temperature = settings.getAiTemperature() != null ? settings.getAiTemperature() : 0.7;
-            int maxTokens = settings.getAiMaxTokens() != null ? settings.getAiMaxTokens() : 2000;
+        
+        String apiKey = getApiKey(settings);
+        String baseUrl = getBaseUrl(settings);
+        String model = getModel(settings);
+        double temperature = settings.getAiTemperature() != null ? settings.getAiTemperature() : 0.7;
+        int maxTokens = settings.getAiMaxTokens() != null ? settings.getAiMaxTokens() : 2000;
 
+        // 检查 API Key 是否为空
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new RuntimeException("AI API Key 未配置，请在系统设置中配置 API Key");
+        }
+
+        log.info("Calling AI API - Base URL: {}, Model: {}", baseUrl, model);
+
+        try {
             String bookList = buildBookList();
             String userContext = buildUserContext();
             String systemPrompt = buildSystemPrompt(bookList);
@@ -55,10 +59,11 @@ public class AiRecommendationService {
                     Map.of("role", "system", "content", systemPrompt),
                     Map.of("role", "user", "content", "用户输入：" + userMessage + "\n\n用户行为数据：\n" + userContext)
                 ),
-                "response_format", Map.of("type", "json_object"),
                 "temperature", temperature,
                 "max_tokens", maxTokens
             );
+            
+            long startTime = System.currentTimeMillis();
             String responseJson = RestClient.create(baseUrl)
                 .post().uri("/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
@@ -68,46 +73,87 @@ public class AiRecommendationService {
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
+            long duration = System.currentTimeMillis() - startTime;
+            
+            log.info("AI API response received successfully in {}ms", duration);
             return parseResponse(responseJson);
         } catch (Exception e) {
-            log.error("AI API failed: {}", e.getMessage());
-            return mockRecommend(userMessage);
+            log.error("AI API call failed - URL: {}, Model: {}, Error: {}", baseUrl, model, e.getMessage(), e);
+            throw new RuntimeException("AI API 调用失败: " + e.getMessage());
         }
     }
 
-    private AiRecommendResponse mockRecommend(String message) {
-        List<Book> books = bookRepository.findAll();
-        List<RecommendationItem> items = new ArrayList<>();
-        Random rand = new Random();
-        String lowerMsg = message.toLowerCase();
-        List<Book> matched = books.stream()
-            .filter(b -> lowerMsg.contains(b.getTitle().toLowerCase())
-                || lowerMsg.contains(b.getAuthor().toLowerCase())
-                || (b.getCategory() != null && lowerMsg.contains(b.getCategory().getName().toLowerCase())))
-            .collect(Collectors.toList());
-        if (matched.isEmpty()) {
-            Collections.shuffle(books, rand);
-            matched = books.subList(0, Math.min(4, books.size()));
+    /**
+     * 测试 API 连接
+     */
+    public ApiTestResult testApiConnection() {
+        var settings = settingService.getSettings();
+        
+        String apiKey = getApiKey(settings);
+        String baseUrl = getBaseUrl(settings);
+        String model = getModel(settings);
+
+        if (apiKey == null || apiKey.isEmpty()) {
+            return ApiTestResult.failure("API Key 未配置");
         }
-        String[] reasons = {
-            "这本书在书库中评分很高，值得一读。",
-            "根据您的阅读偏好，这本书非常匹配。",
-            "这本书是该领域的经典之作，强烈推荐。",
-            "多位用户评价这本书充满启发，适合深入学习。"
-        };
-        for (int i = 0; i < Math.min(4, matched.size()); i++) {
-            Book b = matched.get(i);
-            items.add(new RecommendationItem(
-                b.getId(), b.getTitle(), b.getAuthor(),
-                reasons[rand.nextInt(reasons.length)],
-                70 + rand.nextInt(30),
-                b.getCoverImage(), b.getPrice().doubleValue()
-            ));
+
+        try {
+            log.info("Testing AI API connection - Base URL: {}, Model: {}", baseUrl, model);
+            
+            Map<String, Object> requestBody = Map.of(
+                "model", model,
+                "messages", List.of(
+                    Map.of("role", "user", "content", "Hello, respond with 'OK'")
+                ),
+                "max_tokens", 10
+            );
+            
+            long startTime = System.currentTimeMillis();
+            String responseJson = RestClient.create(baseUrl)
+                .post().uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .header("HTTP-Referer", "http://localhost:5173")
+                .header("X-OpenRouter-Title", "JavaBooks")
+                .body(requestBody)
+                .retrieve()
+                .body(String.class);
+            long duration = System.currentTimeMillis() - startTime;
+
+            // 验证响应格式
+            JsonNode root = objectMapper.readTree(responseJson);
+            JsonNode choices = root.path("choices");
+            if (!choices.isArray() || choices.isEmpty()) {
+                return ApiTestResult.failure("API 响应格式异常：未找到 choices");
+            }
+
+            log.info("AI API connection test successful in {}ms", duration);
+            return ApiTestResult.success(duration, model, baseUrl);
+        } catch (Exception e) {
+            log.error("AI API connection test failed: {}", e.getMessage(), e);
+            return ApiTestResult.failure("连接失败: " + e.getMessage());
         }
-        AiRecommendResponse response = new AiRecommendResponse();
-        response.setSummary("为您推荐以下图书");
-        response.setRecommendations(items);
-        return response;
+    }
+
+    private String getApiKey(com.bookstore.entity.SystemSetting settings) {
+        String dbKey = settings.getAiApiKey();
+        String configKey = aiConfig.getApiKey();
+        String result = (dbKey != null && !dbKey.isEmpty()) ? dbKey : configKey;
+        log.debug("getApiKey - DB: {}, Config: {}, Result: {}", 
+            dbKey != null ? (dbKey.isEmpty() ? "empty" : "***") : "null",
+            configKey != null ? (configKey.isEmpty() ? "empty" : "***") : "null",
+            result != null ? (result.isEmpty() ? "empty" : "***") : "null");
+        return result;
+    }
+
+    private String getBaseUrl(com.bookstore.entity.SystemSetting settings) {
+        return (settings.getAiBaseUrl() != null && !settings.getAiBaseUrl().isEmpty())
+            ? settings.getAiBaseUrl() : aiConfig.getBaseUrl();
+    }
+
+    private String getModel(com.bookstore.entity.SystemSetting settings) {
+        return (settings.getAiModel() != null && !settings.getAiModel().isEmpty())
+            ? settings.getAiModel() : aiConfig.getModel();
     }
 
     private String buildUserContext() {
@@ -146,6 +192,15 @@ public class AiRecommendationService {
     }
 
     private String buildSystemPrompt(String bookList) {
+        var settings = settingService.getSettings();
+        String customPrompt = settings.getAiSystemPrompt();
+        
+        // 如果有自定义提示词，使用它并替换变量
+        if (customPrompt != null && !customPrompt.isEmpty()) {
+            return customPrompt.replace("{bookList}", bookList);
+        }
+        
+        // 默认提示词
         return "你是一位热情的线上书店AI阅读顾问\u201c书童\u201d。你热爱阅读，善于倾听，说话亲切自然像朋友一样。\n\n"
             + "## 书库\n" + bookList + "\n\n"
             + "## 任务\n1. 用100-150字亲切回复用户，分析其阅读偏好并说明推荐思路\n"
@@ -156,7 +211,30 @@ public class AiRecommendationService {
 
     private AiRecommendResponse parseResponse(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
-        String content = root.path("choices").get(0).path("message").path("content").asText();
+        JsonNode choices = root.path("choices");
+        if (!choices.isArray() || choices.isEmpty()) {
+            throw new RuntimeException("API 响应格式异常：未找到 choices");
+        }
+        String content = choices.get(0).path("message").path("content").asText("");
+        if (content.isEmpty()) {
+            throw new RuntimeException("API 响应内容为空");
+        }
+        
+        // 处理 markdown 代码块
+        if (content.contains("```json")) {
+            content = content.replaceAll("```json\\s*", "").replaceAll("```\\s*$", "").trim();
+        } else if (content.contains("```")) {
+            content = content.replaceAll("```\\s*", "").trim();
+        }
+        
+        // 尝试提取 JSON 对象
+        int jsonStart = content.indexOf('{');
+        int jsonEnd = content.lastIndexOf('}');
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            content = content.substring(jsonStart, jsonEnd + 1);
+        }
+        
+        log.debug("Parsed AI response content: {}", content);
         JsonNode data = objectMapper.readTree(content);
 
         AiRecommendResponse response = new AiRecommendResponse();
@@ -184,9 +262,44 @@ public class AiRecommendationService {
             }
         }
         if (items.isEmpty()) {
-            items = mockRecommend("").getRecommendations();
+            throw new RuntimeException("AI 未能从书库中匹配到推荐图书");
         }
         response.setRecommendations(items);
         return response;
+    }
+
+    /**
+     * API 测试结果
+     */
+    public static class ApiTestResult {
+        private boolean success;
+        private String message;
+        private Long responseTime;
+        private String model;
+        private String baseUrl;
+
+        public static ApiTestResult success(Long responseTime, String model, String baseUrl) {
+            ApiTestResult result = new ApiTestResult();
+            result.success = true;
+            result.message = "连接成功";
+            result.responseTime = responseTime;
+            result.model = model;
+            result.baseUrl = baseUrl;
+            return result;
+        }
+
+        public static ApiTestResult failure(String message) {
+            ApiTestResult result = new ApiTestResult();
+            result.success = false;
+            result.message = message;
+            return result;
+        }
+
+        // Getters
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public Long getResponseTime() { return responseTime; }
+        public String getModel() { return model; }
+        public String getBaseUrl() { return baseUrl; }
     }
 }

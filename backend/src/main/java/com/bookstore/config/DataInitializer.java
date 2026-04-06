@@ -17,6 +17,7 @@ import com.bookstore.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Configuration
+@Profile("dev")
 public class DataInitializer {
 
         @Bean
@@ -468,6 +470,22 @@ public class DataInitializer {
                         coverMap.put("高效能人士的七个习惯", "/covers/7-habits.png");
                         coverMap.put("从优秀到卓越", "/covers/good-to-great.png");
 
+                        // Additional books with generated covers
+                        coverMap.put("Head First Java", "/covers/head-first-java.png");
+                        coverMap.put("JavaScript高级程序设计", "/covers/javascript.png");
+                        coverMap.put("Spring实战", "/covers/spring-framework.png");
+                        coverMap.put("Linux命令行与shell脚本编程大全", "/covers/linux-shell.png");
+                        coverMap.put("C程序设计语言", "/covers/c-programming.png");
+                        coverMap.put("数据结构与算法分析", "/covers/data-structures.png");
+                        coverMap.put("Android开发艺术探索", "/covers/android-dev.png");
+                        coverMap.put("Docker实战", "/covers/docker.png");
+                        coverMap.put("Redis设计与实现", "/covers/redis.png");
+                        coverMap.put("微服务架构设计模式", "/covers/microservices.png");
+                        coverMap.put("2001太空漫游", "/covers/2001-space.png");
+                        coverMap.put("挽救计划", "/covers/hail-mary.png");
+                        coverMap.put("黑暗森林", "/covers/dark-forest.png");
+                        coverMap.put("死神永生", "/covers/death-end.png");
+
                         List<Book> allBooks = bookRepository.findAll();
                         List<Book> booksToUpdate = new ArrayList<>();
                         for (Book book : allBooks) {
@@ -479,6 +497,38 @@ public class DataInitializer {
                         }
                         if (!booksToUpdate.isEmpty()) {
                                 bookRepository.saveAll(booksToUpdate);
+                        }
+
+                        // Update books by ID if title matching fails
+                        Map<Long, String> coverMapById = new HashMap<>();
+                        coverMapById.put(13L, "/covers/head-first-java.png");
+                        coverMapById.put(18L, "/covers/javascript.png");
+                        coverMapById.put(21L, "/covers/spring-framework.png");
+                        coverMapById.put(27L, "/covers/linux-shell.png");
+                        coverMapById.put(28L, "/covers/c-programming.png");
+                        coverMapById.put(30L, "/covers/data-structures.png");
+                        coverMapById.put(34L, "/covers/android-dev.png");
+                        coverMapById.put(35L, "/covers/docker.png");
+                        coverMapById.put(38L, "/covers/redis.png");
+                        coverMapById.put(41L, "/covers/microservices.png");
+                        coverMapById.put(44L, "/covers/2001-space.png");
+                        coverMapById.put(46L, "/covers/hail-mary.png");
+                        coverMapById.put(48L, "/covers/dark-forest.png");
+                        coverMapById.put(49L, "/covers/death-end.png");
+
+                        // Refresh entities from DB after previous saveAll to avoid stale state
+                        allBooks = bookRepository.findAll();
+
+                        List<Book> booksByIdToUpdate = new ArrayList<>();
+                        for (Book book : allBooks) {
+                                String newCover = coverMapById.get(book.getId());
+                                if (newCover != null && !newCover.equals(book.getCoverImage())) {
+                                        book.setCoverImage(newCover);
+                                        booksByIdToUpdate.add(book);
+                                }
+                        }
+                        if (!booksByIdToUpdate.isEmpty()) {
+                                bookRepository.saveAll(booksByIdToUpdate);
                         }
 
                         if (orderRepository.count() == 0 && bookRepository.count() > 0 && userRepository.count() > 0) {

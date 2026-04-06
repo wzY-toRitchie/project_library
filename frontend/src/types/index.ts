@@ -31,6 +31,7 @@ export interface User {
     phoneNumber?: string;
     address?: string;
     avatar?: string;
+    points?: number;
 }
 
 export interface OrderItem {
@@ -133,4 +134,22 @@ export interface UserCoupon {
     getTime: string;
     useTime?: string;
     available: boolean;
+}
+
+export interface PointsRuleResponse {
+    ruleKey: string;
+    ruleValue: number;
+    description: string;
+    updateTime: string;
+    updater: string;
+}
+
+export interface CouponPointsRule {
+    id: number;
+    couponId: number;
+    pointsCost: number;
+    maxDailyRedeem: number;
+    totalRedeemed: number;
+    createTime: string;
+    updateTime: string;
 }

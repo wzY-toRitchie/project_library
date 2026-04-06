@@ -2,33 +2,31 @@ package com.bookstore.controller;
 
 import com.bookstore.entity.Category;
 import com.bookstore.service.CategoryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
+@Tag(name = "图书分类", description = "图书分类 CRUD 接口")
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
+    @Operation(summary = "获取所有分类", description = "获取全部图书分类列表")
     @GetMapping
     public List<Category> getAllCategories() {
         return categoryService.getAllCategories();
     }
 
+    @Operation(summary = "新增分类", description = "创建一个新的图书分类（管理员）")
     @PostMapping
-    public ResponseEntity<?> createCategory(@RequestBody @NonNull Category category) {
+    public ResponseEntity<?> createCategory(
+            @Parameter(description = "分类信息", required = true) @RequestBody Category category) {
         try {
             return ResponseEntity.ok(categoryService.createCategory(category));
         } catch (RuntimeException e) {
@@ -36,8 +34,11 @@ public class CategoryController {
         }
     }
 
+    @Operation(summary = "更新分类", description = "修改指定分类的信息（管理员）")
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCategory(@PathVariable @NonNull Long id, @RequestBody @NonNull Category category) {
+    public ResponseEntity<?> updateCategory(
+            @Parameter(description = "分类 ID") @PathVariable Long id,
+            @Parameter(description = "分类信息", required = true) @RequestBody Category category) {
         try {
             return ResponseEntity.ok(categoryService.updateCategory(id, category));
         } catch (RuntimeException e) {
@@ -45,8 +46,10 @@ public class CategoryController {
         }
     }
 
+    @Operation(summary = "删除分类", description = "删除指定的图书分类（管理员）")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteCategory(@PathVariable @NonNull Long id) {
+    public ResponseEntity<?> deleteCategory(
+            @Parameter(description = "分类 ID") @PathVariable Long id) {
         try {
             categoryService.deleteCategory(id);
             return ResponseEntity.ok().build();
