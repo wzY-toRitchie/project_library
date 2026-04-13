@@ -29,6 +29,78 @@ export const BookGridSkeleton: React.FC<{ count?: number }> = ({ count = 8 }) =>
     </div>
 );
 
+export const HomeDiscoverySkeleton: React.FC = () => (
+    <section aria-label="首页推荐内容加载中" className="space-y-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-8">
+            <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-4">
+                    <div className="h-6 skeleton-shimmer rounded w-32" />
+                    <div className="h-10 skeleton-shimmer rounded w-3/4" />
+                    <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index} className="h-10 w-24 skeleton-shimmer rounded-lg" />
+                        ))}
+                    </div>
+                    <div className="h-10 skeleton-shimmer rounded w-40" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Array.from({ length: 2 }).map((_, index) => (
+                        <div
+                            key={index}
+                            className="rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-3"
+                        >
+                            <div className="h-10 w-10 skeleton-shimmer rounded-full" />
+                            <div className="h-6 skeleton-shimmer rounded w-1/2" />
+                            <div className="h-4 skeleton-shimmer rounded w-full" />
+                            <div className="h-10 skeleton-shimmer rounded w-full" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                <div className="h-7 skeleton-shimmer rounded w-24" />
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                        <div className="w-8 h-8 skeleton-shimmer rounded-full" />
+                        <div className="w-10 h-14 skeleton-shimmer rounded" />
+                        <div className="flex-1 space-y-2">
+                            <div className="h-4 skeleton-shimmer rounded w-3/4" />
+                            <div className="h-3 skeleton-shimmer rounded w-1/2" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <section className="space-y-6">
+            <div className="h-7 skeleton-shimmer rounded w-28" />
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                    <div key={index} data-testid="featured-book-skeleton">
+                        <BookCardSkeleton />
+                    </div>
+                ))}
+            </div>
+        </section>
+    </section>
+);
+
+export const AdminDashboardChartsSkeleton: React.FC = () => (
+    <section aria-label="管理后台图表加载中" className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div data-testid="admin-chart-skeleton" className="lg:col-span-2 h-80 rounded-xl skeleton-shimmer" />
+            <div data-testid="admin-chart-skeleton" className="h-80 rounded-xl skeleton-shimmer" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div data-testid="admin-chart-skeleton" className="lg:col-span-2 h-80 rounded-xl skeleton-shimmer" />
+            <div data-testid="admin-chart-skeleton" className="h-80 rounded-xl skeleton-shimmer" />
+        </div>
+        <div data-testid="admin-chart-skeleton" className="h-80 rounded-xl skeleton-shimmer" />
+    </section>
+);
+
 // 订单卡片骨架屏
 export const OrderCardSkeleton: React.FC = () => (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
