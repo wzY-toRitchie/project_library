@@ -29,6 +29,33 @@ export const BookGridSkeleton: React.FC<{ count?: number }> = ({ count = 8 }) =>
     </div>
 );
 
+// 首页推荐内容骨架屏
+export const HomeDiscoverySkeleton: React.FC = () => (
+    <section aria-label="首页推荐内容加载中" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+        {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} data-testid="featured-book-skeleton">
+                <BookCardSkeleton />
+            </div>
+        ))}
+    </section>
+);
+
+// 管理后台图表骨架屏
+export const AdminDashboardChartsSkeleton: React.FC = () => (
+    <section aria-label="管理后台图表加载中" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Array.from({ length: 5 }).map((_, i) => (
+            <div
+                key={i}
+                data-testid="admin-chart-skeleton"
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+            >
+                <div className="h-5 skeleton-shimmer rounded w-1/3 mb-4" />
+                <div className="h-64 skeleton-shimmer rounded" />
+            </div>
+        ))}
+    </section>
+);
+
 // 订单卡片骨架屏
 export const OrderCardSkeleton: React.FC = () => (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
