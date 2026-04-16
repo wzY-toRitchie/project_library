@@ -3,11 +3,13 @@ package com.bookstore.service;
 import com.bookstore.entity.Book;
 import com.bookstore.entity.Review;
 import com.bookstore.repository.BookRepository;
+import com.bookstore.repository.OrderRepository;
 import com.bookstore.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 @Service
@@ -18,6 +20,9 @@ public class ReviewService {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Transactional
     public Review addReview(@NonNull Review review) {
@@ -37,6 +42,14 @@ public class ReviewService {
 
     public List<Review> getReviewsByUserId(@NonNull Long userId) {
         return reviewRepository.findByUserId(userId);
+    }
+
+    public boolean hasUserPurchasedBook(@NonNull Long userId, @NonNull Long bookId) {
+        return orderRepository.existsCompletedOrderByUserIdAndBookId(userId, bookId);
+    }
+
+    public boolean hasUserReviewedBook(@NonNull Long userId, @NonNull Long bookId) {
+        return reviewRepository.existsByUserIdAndBookId(userId, bookId);
     }
 
     /**
@@ -61,14 +74,10 @@ public class ReviewService {
     }
 
     private void updateBookRating(@NonNull Long bookId) {
-        List<Review> reviews = reviewRepository.findByBookId(bookId);
-        if (reviews.isEmpty())
-            return;
-
-        double average = reviews.stream()
-                .mapToInt(Review::getRating)
-                .average()
-                .orElse(5.0);
+        ReviewRepository.BookRatingStats stats = reviewRepository.findBookRatingStatsByBookId(bookId);
+        double average = stats != null && stats.getReviewCount() != null && stats.getReviewCount() > 0
+                ? (stats.getAverageRating() == null ? 0.0 : stats.getAverageRating())
+                : 0.0;
 
         Book book = bookRepository.findById(bookId).orElse(null);
         if (book != null) {

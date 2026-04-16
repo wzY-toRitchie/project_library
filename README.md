@@ -140,12 +140,17 @@ npm run dev
 | `CORS_ALLOWED_ORIGINS` | 允许的跨域来源 | `http://localhost:5173,http://localhost:5174,http://localhost:3000` |
 | `OPENROUTER_API_KEY` | OpenRouter API 密钥 (AI 荐书) | 空 (启用真实 AI) |
 | `OPENROUTER_MODEL` | AI 模型 | `openrouter/free` (默认), `anthropic/claude-3-haiku` |
+| `OAUTH2_ENABLED` | 是否启用 OAuth2 登录 | `true` |
+| `OAUTH2_REDIRECT_URI` | OAuth2 成功后前端回调地址 | `http://localhost:5173/oauth/callback` |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 空（未配置时不会发起真实 GitHub 登录） |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 空 |
 
 ### 前端
 
 | 变量名 | 说明 |
 |--------|------|
-| `VITE_API_BASE_URL` | 后端 API 地址 |
+| `VITE_API_BASE_URL` | 后端 API 地址（如 `http://127.0.0.1:8080/api`） |
+| `VITE_BACKEND_ORIGIN` | 后端源地址（用于拼接 OAuth2 授权入口，如 `http://127.0.0.1:8080`） |
 
 ## API 接口
 
@@ -155,6 +160,8 @@ npm run dev
 |------|------|------|
 | POST | `/api/auth/signup` | 用户注册（密码强度校验：8 位以上，含大写、小写、数字） |
 | POST | `/api/auth/signin` | 登录（返回 JWT + 用户信息） |
+| GET | `/oauth2/authorization/github` | 发起 GitHub OAuth2 授权（浏览器重定向） |
+| GET | `/login/oauth2/code/github` | GitHub OAuth2 回调（由 Spring Security 处理） |
 
 ### 图书
 
@@ -392,9 +399,63 @@ project_library/
 - **密码加密**: BCrypt + 注册强度校验（8 位以上，至少 1 大写 1 小写 1 数字）
 - **登录锁定**: 内存 Map 记录，可配置失败次数阈值，达到上限后锁定指定时长
 - **权限控制**: `@EnableMethodSecurity` + `@PreAuthorize("hasRole('ADMIN')")`，部分接口在控制器层手动校验
-- **公开接口**: 认证、图书列表（GET）、分类（GET）、可用优惠券、系统设置（GET）、单本书评价、支付宝回调、Swagger、错误处理
+- **公开接口**: 认证、OAuth2 授权入口与回调路径、图书列表（GET）、分类（GET）、可用优惠券、系统设置（GET）、单本书评价、支付宝回调、Swagger、错误处理
 - **登录接口**: 其余非管理接口需登录
 - **管理接口**: 上传上传、图书增删改、分类增删改、设置修改、导出、仪表盘、订单列表、管理员优惠券、评价删除、积分规则管理/调整
+
+## GitHub OAuth2 登录配置与排错
+
+### 1) 本地联调必备配置
+
+后端（`.env` 或运行环境变量）至少配置：
+
+```properties
+OAUTH2_ENABLED=true
+OAUTH2_REDIRECT_URI=http://127.0.0.1:5173/oauth/callback
+GITHUB_CLIENT_ID=<你的真实 GitHub Client ID>
+GITHUB_CLIENT_SECRET=<你的真实 GitHub Client Secret>
+```
+
+前端（`frontend/.env`）建议配置：
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8080/api
+VITE_BACKEND_ORIGIN=http://127.0.0.1:8080
+```
+
+说明：登录页会基于 `VITE_BACKEND_ORIGIN` 拼接 `http://127.0.0.1:8080/oauth2/authorization/github` 发起授权。
+
+### 2) GitHub OAuth App 回调地址必须完全一致
+
+在 GitHub OAuth App 中将 **Authorization callback URL** 配置为：
+
+```text
+http://127.0.0.1:8080/login/oauth2/code/github
+```
+
+该地址必须与后端发起授权时的 `redirect_uri` 完全一致（协议、域名、端口、路径都要一致）。
+
+### 3) 为什么会出现 `client_id=dummy-client` 且 GitHub 404
+
+如果你看到授权链接中是 `client_id=dummy-client` 并跳到 GitHub 404，通常表示当前仍在使用占位/示例配置，而非真实 OAuth App 凭据。
+
+处理方式：
+- 检查运行时是否正确注入了 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+- 重启后端后再次访问 `/oauth2/authorization/github`
+
+### 4) 常见问题速查
+
+- **401 / Whitelabel Error Page（Unauthorized）**  
+  检查后端安全配置是否放行 `/oauth2/**`、`/login/oauth2/**` 与 `/error`。
+
+- **GitHub 授权页 404**  
+  优先检查 `client_id` 是否真实、callback URL 是否与后端 `redirect_uri` 完全一致。
+
+- **点击登录跳错端口**  
+  检查 `VITE_BACKEND_ORIGIN` 是否与后端实际端口一致（例如后端在 8081 时需同步改为 `http://127.0.0.1:8081`）。
+
+- **后端本地启动被测试编译阻断**  
+  如当前仅做联调，可临时使用：`mvn -Dmaven.test.skip=true spring-boot:run`
 
 ## 配置说明
 

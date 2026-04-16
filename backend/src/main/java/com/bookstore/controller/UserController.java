@@ -1,6 +1,7 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.User;
+import com.bookstore.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.bookstore.payload.request.UpdatePasswordRequest;
@@ -30,6 +31,12 @@ public class UserController {
     @GetMapping("/{id}")
     @Operation(summary = "获取用户信息", description = "根据 ID 获取用户摘要信息")
     public ResponseEntity<UserSummaryResponse> getUserById(@PathVariable @NonNull Long id) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
+        if (!id.equals(currentUserId) && !isAdmin) {
+            throw new ForbiddenException("无权查看其他用户信息");
+        }
+
         return userService.getUserSummary(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

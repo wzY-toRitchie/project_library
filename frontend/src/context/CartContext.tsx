@@ -44,10 +44,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }));
             setCartItems(backendItems);
         } catch (error: any) {
-            if (error?.response?.status === 400 || error?.response?.status === 401) {
-                // Token expired or invalid - clear cart silently
+            if (error?.response?.status === 400) {
                 setCartItems([]);
-            } else {
+            } else if (error?.response?.status !== 401) {
                 console.error('Failed to sync cart:', error);
             }
         }
@@ -55,10 +54,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 登录时从后端加载购物车
     useEffect(() => {
-        if (isAuthenticated) {
-            syncCart();
+        if (!isAuthenticated) {
+            const savedCart = localStorage.getItem('cart');
+            setCartItems(savedCart ? JSON.parse(savedCart) : []);
+            return;
         }
+        syncCart();
     }, [isAuthenticated, syncCart]);
+
+    useEffect(() => {
+        const handleLogout = () => {
+            const savedCart = localStorage.getItem('cart');
+            setCartItems(savedCart ? JSON.parse(savedCart) : []);
+        };
+
+        window.addEventListener('auth:logout', handleLogout);
+        return () => {
+            window.removeEventListener('auth:logout', handleLogout);
+        };
+    }, []);
 
     const addToCart = async (book: Book) => {
         // 保存原始状态用于回滚

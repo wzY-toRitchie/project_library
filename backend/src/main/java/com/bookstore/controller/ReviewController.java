@@ -1,6 +1,8 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.Review;
+import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.bookstore.payload.request.ReviewRequest;
@@ -53,6 +55,14 @@ public class ReviewController {
     @Operation(summary = "提交评价", description = "对已购图书提交评分和评论")
     public Map<String, Object> createReview(@Valid @RequestBody ReviewRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
+
+        if (!reviewService.hasUserPurchasedBook(userId, request.getBookId())) {
+            throw new BadRequestException("仅已完成订单的用户可评价该图书");
+        }
+        if (reviewService.hasUserReviewedBook(userId, request.getBookId())) {
+            throw new BadRequestException("该图书已评价，请勿重复提交");
+        }
+
         Review review = new Review();
         review.setUser(userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在")));
@@ -77,7 +87,7 @@ public class ReviewController {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         boolean isAdmin = SecurityUtils.isAdmin();
         if (!userId.equals(currentUserId) && !isAdmin) {
-            throw new RuntimeException("无权查看其他用户的评价");
+            throw new ForbiddenException("无权查看其他用户的评价");
         }
         return reviewService.getReviewsByUserId(userId);
     }

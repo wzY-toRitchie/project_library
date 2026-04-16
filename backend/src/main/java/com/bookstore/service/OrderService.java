@@ -6,6 +6,7 @@ import com.bookstore.entity.OrderItem;
 import com.bookstore.entity.Notification;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
+import com.bookstore.exception.BadRequestException;
 import com.bookstore.payload.request.OrderCreateRequest;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.OrderRepository;
@@ -72,6 +73,16 @@ public class OrderService {
             order.setUser(user);
         }
 
+        Integer lowStockThreshold = 10;
+        try {
+            Integer configuredThreshold = systemSettingService.getSettings().getLowStockThreshold();
+            if (configuredThreshold != null) {
+                lowStockThreshold = configuredThreshold;
+            }
+        } catch (Exception e) {
+            logger.warn("读取库存预警阈值失败", e);
+        }
+
         if (order.getItems() != null) {
             BigDecimal totalPrice = BigDecimal.ZERO;
             for (OrderItem item : order.getItems()) {
@@ -89,8 +100,7 @@ public class OrderService {
                 if (updated == 0) {
                     throw new RuntimeException("库存不足: " + book.getTitle() + " (剩余: " + book.getStock() + ")");
                 }
-                // 刷新book对象以获取最新库存
-                book = bookRepository.findById(book.getId()).orElse(book);
+                book.setStock(book.getStock() - item.getQuantity());
 
                 // 计算总价
                 totalPrice = totalPrice.add(book.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
@@ -98,11 +108,7 @@ public class OrderService {
 
                 // 库存预警
                 try {
-                    Integer threshold = systemSettingService.getSettings().getLowStockThreshold();
-                    if (threshold == null)
-                        threshold = 10;
-
-                    if (book.getStock() < threshold) {
+                    if (book.getStock() < lowStockThreshold) {
                         notificationRepository.save(new Notification("STOCK",
                                 "库存预警: " + book.getTitle() + " (剩余: " + book.getStock() + ")"));
                     }
@@ -220,10 +226,15 @@ public class OrderService {
     }
 
     public Order updateOrderStatus(@NonNull Long id, @NonNull OrderStatus status) {
-        return orderRepository.findById(id).map(order -> {
-            order.setStatus(status);
-            return orderRepository.save(order);
-        }).orElseThrow(() -> new RuntimeException("订单不存在"));
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("订单不存在"));
+
+        if (!isValidStatusTransition(order.getStatus(), status)) {
+            throw new BadRequestException("非法订单状态流转: " + order.getStatus() + " -> " + status);
+        }
+
+        order.setStatus(status);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -246,8 +257,8 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("订单不存在"));
 
         // 检查订单状态
-        if (!"PENDING".equals(order.getStatus())) {
-            throw new RuntimeException("只有待支付状态的订单才能取消");
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BadRequestException("只有待支付状态的订单才能取消");
         }
 
         // 原子恢复库存
@@ -275,6 +286,18 @@ public class OrderService {
         }
 
         return savedOrder;
+    }
+
+    private boolean isValidStatusTransition(OrderStatus currentStatus, OrderStatus newStatus) {
+        if (currentStatus == newStatus) {
+            return true;
+        }
+        return switch (currentStatus) {
+            case PENDING -> newStatus == OrderStatus.PAID || newStatus == OrderStatus.CANCELLED;
+            case PAID -> newStatus == OrderStatus.SHIPPED;
+            case SHIPPED -> newStatus == OrderStatus.COMPLETED;
+            case COMPLETED, CANCELLED -> false;
+        };
     }
 
     /**

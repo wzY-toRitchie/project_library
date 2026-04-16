@@ -52,13 +52,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearTokenCache();
         setUser(null);
         localStorage.removeItem('user');
+        localStorage.setItem('cart', JSON.stringify([]));
+        window.dispatchEvent(new Event('auth:logout'));
     };
 
     const isAuthenticated = !!user;
 
     const isAdmin = useMemo(() => {
         if (!user || !user.roles) return false;
-        return user.roles.includes('ROLE_ADMIN') || user.roles.includes('ADMIN');
+        return user.roles.some(role => {
+            const normalized = role?.toUpperCase?.();
+            return normalized === 'ROLE_ADMIN' || normalized === 'ADMIN';
+        });
     }, [user]);
 
     return (

@@ -3,6 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { message } from 'antd';
 
+function decodeJwtPayload(token: string) {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) {
+        throw new Error('Invalid token payload');
+    }
+
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+}
+
 const OAuthCallback = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -20,12 +31,12 @@ const OAuthCallback = () => {
 
         if (token) {
             try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
+                const payload = decodeJwtPayload(token);
                 login({
-                    id: payload.sub ? Number(payload.sub) : 0,
-                    username: payload.username || '',
+                    id: payload.id ? Number(payload.id) : 0,
+                    username: payload.sub || payload.username || '',
                     email: payload.email || '',
-                    roles: payload.roles || [],
+                    roles: payload.roles || ['ROLE_USER'],
                     accessToken: token,
                     tokenType: 'Bearer'
                 });

@@ -15,6 +15,9 @@ const Login: React.FC = () => {
         password: '',
         remember: false
     });
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+    const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN || apiBaseUrl.replace(/\/api\/?$/, '');
+    const githubLoginUrl = `${backendOrigin}/oauth2/authorization/github`;
 
     const onFinish = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -29,7 +32,7 @@ const Login: React.FC = () => {
             const response = await api.post('/auth/signin', { username, password });
             login(response.data);
             message.success('登录成功');
-            
+
             if (response.data.roles && (response.data.roles.includes('ADMIN') || response.data.roles.includes('ROLE_ADMIN'))) {
                 navigate('/admin');
             } else {
@@ -38,7 +41,7 @@ const Login: React.FC = () => {
         } catch (error) {
             console.error('Login failed:', error);
             let errorMessage = '登录失败，请稍后重试';
-            
+
             if (axios.isAxiosError(error)) {
                 const data = error.response?.data;
                 if (typeof data === 'string') {
@@ -47,7 +50,7 @@ const Login: React.FC = () => {
                     errorMessage = (data as { message: string }).message;
                 }
             }
-            
+
             message.error(errorMessage);
         } finally {
             setLoading(false);
@@ -61,7 +64,7 @@ const Login: React.FC = () => {
                 <div className="hidden md:flex md:w-1/2 hero-pattern relative items-center justify-center p-12">
                     {/* Grain texture overlay */}
                     <div className="absolute inset-0 bg-noise"></div>
-                    
+
                     <div className="z-10 text-center text-white">
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-8 border border-white/20">
                             <span className="material-symbols-outlined text-4xl text-amber-300" aria-hidden="true">auto_stories</span>
@@ -78,7 +81,7 @@ const Login: React.FC = () => {
                             </p>
                         </div>
                     </div>
-                    
+
                 </div>
 
                 {/* Right Panel - Form */}
@@ -185,6 +188,14 @@ const Login: React.FC = () => {
                                 </span>
                             ) : '登录'}
                         </button>
+
+                        <a
+                            href={githubLoginUrl}
+                            className="mt-4 w-full inline-flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-700 rounded-lg py-3 text-sm font-medium text-ink dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">code</span>
+                            使用 GitHub 登录
+                        </a>
                     </form>
 
                     <div className="mt-8 text-center">

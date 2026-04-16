@@ -14,6 +14,16 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserId(Long userId);
     Page<Order> findByUserId(Long userId, Pageable pageable);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(oi) > 0 THEN true ELSE false END
+            FROM Order o
+            JOIN o.items oi
+            WHERE o.user.id = :userId
+              AND oi.book.id = :bookId
+              AND o.status = com.bookstore.enums.OrderStatus.COMPLETED
+            """)
+    boolean existsCompletedOrderByUserIdAndBookId(@Param("userId") Long userId, @Param("bookId") Long bookId);
     
     // 统计时间范围内的订单数
     long countByCreateTimeBetween(LocalDateTime start, LocalDateTime end);
