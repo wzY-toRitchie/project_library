@@ -1,12 +1,12 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.Order;
-import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
+import com.bookstore.exception.ForbiddenException;
 import com.bookstore.payload.request.OrderCreateRequest;
 import com.bookstore.payload.response.PageResponse;
-import com.bookstore.service.OrderService;
 import com.bookstore.security.SecurityUtils;
+import com.bookstore.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,6 +43,11 @@ public class OrderController {
             @Parameter(description = "用户 ID") @PathVariable Long userId,
             @Parameter(description = "页码，从 0 开始") @RequestParam(required = false, defaultValue = "0") int page,
             @Parameter(description = "每页数量") @RequestParam(required = false, defaultValue = "10") int size) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && !currentUserId.equals(userId)) {
+            throw new ForbiddenException("无权查看其他用户订单");
+        }
+
         Page<Order> orderPage = orderService.getOrdersByUserId(userId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime")));
         return new PageResponse<>(orderPage.getContent(), page, size, orderPage.getTotalElements());
@@ -63,22 +68,20 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(
             @Parameter(description = "订单 ID") @PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(orderService.getOrderById(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+        Order order = orderService.getOrderById(id);
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && (order.getUser() == null || !currentUserId.equals(order.getUser().getId()))) {
+            throw new ForbiddenException("无权查看他人订单");
         }
+        return ResponseEntity.ok(order);
     }
 
     @Operation(summary = "创建订单", description = "根据请求中的商品列表创建新订单，自动扣减库存并计算总价")
     @PostMapping
     public ResponseEntity<?> createOrder(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "订单创建请求", required = true) @RequestBody OrderCreateRequest request) {
-        try {
-            return ResponseEntity.ok(orderService.createOrderFromRequest(request));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(orderService.createOrderFromRequest(request));
     }
 
     @Operation(summary = "更新订单状态", description = "修改订单状态，支持支付、发货、完成等操作。普通用户只能将自己的订单改为已支付或已完成，管理员可以修改任何订单")
@@ -87,27 +90,21 @@ public class OrderController {
             @Parameter(description = "订单 ID") @PathVariable Long id,
             @Parameter(description = "目标状态：PENDING/PAID/SHIPPED/COMPLETED/CANCELLED", required = true)
             @RequestParam String status) {
-        try {
-            OrderStatus orderStatus = OrderStatus.fromString(status);
-            Long currentUserId = SecurityUtils.getCurrentUserId();
-            boolean isAdmin = SecurityUtils.isAdmin();
+        OrderStatus orderStatus = OrderStatus.fromString(status);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
 
-            // 允许用户支付自己的订单，或者管理员修改任何订单状态
-            if (!isAdmin) {
-                boolean isOwner = orderService.isOrderOwnedByUser(id, currentUserId);
-                if (!isOwner) {
-                    return ResponseEntity.status(403).body("无权修改他人订单状态");
-                }
-                // 普通用户只能将订单改为已支付或已完成状态
-                if (orderStatus != OrderStatus.PAID && orderStatus != OrderStatus.COMPLETED) {
-                    return ResponseEntity.status(403).body("无权执行此操作");
-                }
+        if (!isAdmin) {
+            boolean isOwner = orderService.isOrderOwnedByUser(id, currentUserId);
+            if (!isOwner) {
+                return ResponseEntity.status(403).body("无权修改他人订单状态");
             }
-
-            return ResponseEntity.ok(orderService.updateOrderStatus(id, orderStatus));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            if (orderStatus != OrderStatus.PAID && orderStatus != OrderStatus.COMPLETED) {
+                return ResponseEntity.status(403).body("无权执行此操作");
+            }
         }
+
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, orderStatus));
     }
 
     @Operation(summary = "删除订单", description = "删除指定订单记录，普通用户只能删除自己的订单")
@@ -134,26 +131,25 @@ public class OrderController {
     public ResponseEntity<?> cancelOrder(
             @Parameter(description = "订单 ID") @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> requestBody) {
-        try {
-            Long currentUserId = SecurityUtils.getCurrentUserId();
-            boolean isAdmin = SecurityUtils.isAdmin();
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
 
-            // 检查权限
-            if (!isAdmin && !orderService.isOrderOwnedByUser(id, currentUserId)) {
-                return ResponseEntity.status(403).body("无权取消他人订单");
-            }
-
-            String cancelReason = requestBody != null ? requestBody.get("reason") : null;
-            Order cancelledOrder = orderService.cancelOrder(id, cancelReason);
-            return ResponseEntity.ok(cancelledOrder);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        if (!isAdmin && !orderService.isOrderOwnedByUser(id, currentUserId)) {
+            return ResponseEntity.status(403).body("无权取消他人订单");
         }
+
+        String cancelReason = requestBody != null ? requestBody.get("reason") : null;
+        Order cancelledOrder = orderService.cancelOrder(id, cancelReason);
+        return ResponseEntity.ok(cancelledOrder);
     }
 
     @Operation(summary = "批量更新订单状态", description = "批量修改多个订单的状态（管理员）")
     @PostMapping("/batch/status")
     public ResponseEntity<?> batchUpdateOrderStatus(@RequestBody Map<String, Object> request) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权批量更新订单状态");
+        }
+
         try {
             @SuppressWarnings("unchecked")
             java.util.List<Number> orderIds = (java.util.List<Number>) request.get("orderIds");

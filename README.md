@@ -38,25 +38,49 @@
 - MySQL 8.0+
 - Maven 3.6+
 
-### 1. 数据库配置
+### 1. 创建数据库
 
-创建数据库：
 ```sql
 CREATE DATABASE online_bookstore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-修改 `backend/src/main/resources/application.properties` 中的数据库账号密码，或设置环境变量：`DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET`、`JWT_EXPIRATION_MS`。
+### 2. 配置后端环境变量
 
-### 2. 启动后端
+不要直接修改 `backend/src/main/resources/application.properties` 中的敏感配置。开发/演示时请通过环境变量提供数据库账号和 JWT 密钥。
+
+最少需要：
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`（Base64 编码，至少 32 字节）
+
+示例（PowerShell）：
+
+```powershell
+$env:DB_URL="jdbc:mysql://localhost:3306/online_bookstore?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="你的数据库密码"
+$env:JWT_SECRET="你的Base64编码JWT密钥"
+```
+
+也可以参考 `backend/.env.example` 维护本地环境变量文件。
+
+### 3. 启动后端
 
 ```bash
 cd backend
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-后端运行在 `http://localhost:8080`，API 文档访问 `http://localhost:8080/swagger-ui/index.html`。
+说明：
 
-### 3. 启动前端
+- 后端默认地址：`http://localhost:8080`
+- Swagger UI：`http://localhost:8080/swagger-ui/index.html`
+- `dev` profile 会启用 `backend/src/main/java/com/bookstore/config/DataInitializer.java:34` 的示例数据初始化
+- 不加 `dev` profile 时，不会自动注入演示账号、图书和订单数据
+
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -64,16 +88,29 @@ npm install
 npm run dev
 ```
 
-前端运行在 `http://localhost:5173`。
+前端默认地址：`http://localhost:5173`
+
+### 5. 推荐答辩演示路径
+
+1. 使用 `admin / Admin@123` 登录后台，展示仪表盘、图书管理、订单管理、评价管理
+2. 切换到 `user / User@1234`，展示首页、搜索、图书详情、购物车、下单流程
+3. 演示订单列表、评论提交、个人中心、签到/优惠券等用户能力
+4. 最后按需展示 AI 荐书、OAuth2 登录、支付宝沙箱支付等扩展能力
 
 ## 默认账号
+
+以下账号仅在 `dev` profile 启用且数据库中尚未存在对应用户时由示例数据初始化器写入：
 
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
 | 管理员 | `admin` | `Admin@123` | 完整后台管理权限 |
 | 普通用户 | `user` | `User@1234` | 仅限浏览和购买 |
 
-激活 `dev` profile 时系统自动初始化示例数据，包含用户、分类、图书和示例订单。
+## 第三方能力说明
+
+- **AI 荐书**：默认使用 Mock 模式，可直接演示基础流程；配置 `OPENROUTER_API_KEY` 后可切换为真实模型调用
+- **OAuth2 登录**：默认关闭；只有在提供 GitHub/Gitee Client 配置并显式开启 `OAUTH2_ENABLED=true` 时才建议演示
+- **支付宝支付**：仅在补齐沙箱参数后演示；未配置时可跳过，不影响主体功能验收
 
 ## 功能模块
 
@@ -91,7 +128,7 @@ npm run dev
 - **收藏夹**: 图书收藏/取消、数量统计、批量清空
 - **浏览历史**: 自动记录浏览、最近浏览、浏览量统计、单项/全部清除
 - **消息通知**: 系统通知列表、一键全部已读
-- **AI 智能荐书**: 基于 OpenRouter 大语言模型，对话式交互，返回图书推荐列表含匹配度和推荐理由，支持 API 连接测试；未配置 API Key 时默认 Mock 模式
+- **AI 智能荐书**: 基于 OpenRouter 大语言模型，对话式交互，返回图书推荐列表含匹配度和推荐理由，支持 API 连接测试；默认 Mock 模式，配置 API Key 后可切换真实调用
 - **支付宝支付**: 沙箱环境电脑网站支付，支持创建支付、查询状态、异步回调、关闭订单、退款
 - **深色模式**: 亮色/暗色主题切换
 - **作者详情页**: 按作者维度展示其所有图书
@@ -128,22 +165,24 @@ npm run dev
 
 ### 后端
 
-| 变量名 | 说明 | 默认值 (开发环境) |
+| 变量名 | 说明 | 推荐值 / 默认行为 |
 |--------|------|-------------------|
-| `DB_URL` | MySQL 连接地址 | `jdbc:mysql://localhost:3306/online_bookstore?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true` |
-| `DB_USERNAME` | 数据库用户名 | `root` |
-| `DB_PASSWORD` | 数据库密码 | `1234` |
-| `JWT_SECRET` | JWT 签名密钥 | `devSecretKey123456789012345678901234` |
+| `DB_URL` | MySQL 连接地址 | 本地 MySQL `online_bookstore` 数据库 |
+| `DB_USERNAME` | 数据库用户名 | 必填 |
+| `DB_PASSWORD` | 数据库密码 | 必填 |
+| `JWT_SECRET` | JWT 签名密钥 | 必填，Base64 编码，至少 32 字节 |
 | `JWT_EXPIRATION_MS` | Token 有效期 | `86400000` (24 小时) |
 | `LOGIN_MAX_ATTEMPTS` | 登录锁定阈值 | `5` |
 | `LOGIN_LOCK_DURATION` | 锁定时长 (分钟) | `15` |
-| `CORS_ALLOWED_ORIGINS` | 允许的跨域来源 | `http://localhost:5173,http://localhost:5174,http://localhost:3000` |
-| `OPENROUTER_API_KEY` | OpenRouter API 密钥 (AI 荐书) | 空 (启用真实 AI) |
-| `OPENROUTER_MODEL` | AI 模型 | `openrouter/free` (默认), `anthropic/claude-3-haiku` |
-| `OAUTH2_ENABLED` | 是否启用 OAuth2 登录 | `true` |
+| `OPENROUTER_API_KEY` | OpenRouter API 密钥 | 不填时配合 Mock 模式演示 |
+| `OAUTH2_ENABLED` | 是否启用 OAuth2 登录 | 默认 `false` |
 | `OAUTH2_REDIRECT_URI` | OAuth2 成功后前端回调地址 | `http://localhost:5173/oauth/callback` |
-| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 空（未配置时不会发起真实 GitHub 登录） |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 空 |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 可选 |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 可选 |
+| `ALIPAY_APP_ID` | 支付宝应用 ID | 沙箱演示时可选配置 |
+| `ALIPAY_PRIVATE_KEY` | 支付宝应用私钥 | 沙箱演示时可选配置 |
+| `ALIPAY_PUBLIC_KEY` | 支付宝公钥 | 沙箱演示时可选配置 |
+| `APP_UPLOAD_DIR` | 上传文件根目录 | 默认 `uploads`，生产建议配置绝对路径 |
 
 ### 前端
 
@@ -297,7 +336,7 @@ npm run dev
 |------|------|------|
 | GET | `/api/reviews/book/{bookId}` | 公开 |
 | POST | `/api/reviews` | 登录用户 |
-| DELETE | `/api/reviews/{id}` | 管理员 |
+| DELETE | `/api/reviews/{id}` | 评论作者本人或管理员 |
 | GET/POST/PUT/DELETE | `/api/users/addresses/**` | 登录用户 |
 | GET/PUT | `/api/settings` | 公开/仅管理员修改 |
 | POST | `/api/uploads/books` | 管理员 |
@@ -461,7 +500,7 @@ http://127.0.0.1:8080/login/oauth2/code/github
 
 - **数据初始化**: `DataInitializer` 受 `@Profile("dev")` 保护，仅在 dev profile 激活时运行
 - **CORS**: WebConfig + SecurityConfig 双重配置，支持多开发端口
-- **上传路径**: 开发环境使用 `{user.dir}/uploads`，生产环境为 `/var/www/bookstore/uploads`
+- **上传路径**: 统一由 `APP_UPLOAD_DIR` / `app.upload.dir` 决定；开发环境默认 `uploads`，生产环境默认 `/var/www/bookstore/uploads`
 - **库存安全**: `BookRepository.decreaseStock()` 原子扣减，防止超卖
 - **图书实体**: `@Version` 乐观锁，`@PrePersist`/`@PreUpdate` 自动维护时间戳
 - **购物车**: 未登录存 localStorage，登录后自动同步，乐观更新 + 失败回滚

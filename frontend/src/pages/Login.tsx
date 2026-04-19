@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { message } from 'antd';
-import { useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +19,19 @@ const Login: React.FC = () => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
     const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN || apiBaseUrl.replace(/\/api\/?$/, '');
     const githubLoginUrl = `${backendOrigin}/oauth2/authorization/github`;
+    const redirectAfterLogin = useMemo(() => {
+        const state = location.state as { from?: { pathname?: string; search?: string; hash?: string; state?: unknown } } | null;
+        const stateTarget = state?.from?.pathname
+            ? `${state.from.pathname}${state.from.search ?? ''}${state.from.hash ?? ''}`
+            : null;
+        const queryTarget = new URLSearchParams(location.search).get('redirect');
+        const candidate = stateTarget ?? queryTarget;
+        return candidate && candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : null;
+    }, [location.search, location.state]);
+    const redirectState = useMemo(() => {
+        const state = location.state as { from?: { state?: unknown } } | null;
+        return state?.from?.state;
+    }, [location.state]);
 
     const onFinish = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -33,10 +47,12 @@ const Login: React.FC = () => {
             login(response.data);
             message.success('登录成功');
 
-            if (response.data.roles && (response.data.roles.includes('ADMIN') || response.data.roles.includes('ROLE_ADMIN'))) {
-                navigate('/admin');
+            if (redirectAfterLogin) {
+                navigate(redirectAfterLogin, { replace: true, state: redirectState });
+            } else if (response.data.roles && (response.data.roles.includes('ADMIN') || response.data.roles.includes('ROLE_ADMIN'))) {
+                navigate('/admin', { replace: true });
             } else {
-                navigate('/');
+                navigate('/', { replace: true });
             }
         } catch (error) {
             console.error('Login failed:', error);

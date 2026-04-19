@@ -93,8 +93,6 @@ const BookDetail: React.FC = () => {
         if (!book) return;
         if (!isAuthenticated) {
             message.warning('请先登录后再购买');
-            navigate('/login');
-            return;
         }
         setAddingToCart(true);
         try {

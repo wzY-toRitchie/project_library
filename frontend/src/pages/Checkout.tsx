@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
@@ -22,16 +22,50 @@ interface LocationState {
     totalPrice: number;
 }
 
+const CHECKOUT_STORAGE_KEY = 'checkout:pending';
+
 const Checkout: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, login } = useAuth();
-    const { removeFromCart, clearCart } = useCart();
-    
-    // Retrieve passed state
-    const state = location.state as LocationState;
-    const items = state?.items || [];
-    const totalPrice = state?.totalPrice || 0;
+    const { cartItems, clearCart } = useCart();
+
+    const checkoutState = useMemo(() => {
+        const routeState = location.state as LocationState | null;
+        if (routeState?.items?.length) {
+            return routeState;
+        }
+
+        const savedCheckout = sessionStorage.getItem(CHECKOUT_STORAGE_KEY);
+        if (savedCheckout) {
+            try {
+                const parsed = JSON.parse(savedCheckout) as LocationState;
+                if (parsed?.items?.length) {
+                    return parsed;
+                }
+            } catch {
+                sessionStorage.removeItem(CHECKOUT_STORAGE_KEY);
+            }
+        }
+
+        if (cartItems.length > 0) {
+            return {
+                items: cartItems.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    author: item.author,
+                    price: item.price,
+                    quantity: item.quantity,
+                    coverImage: item.coverImage
+                })),
+                totalPrice: cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+            };
+        }
+
+        return null;
+    }, [cartItems, location.state]);
+    const items = checkoutState?.items || [];
+    const totalPrice = checkoutState?.totalPrice || 0;
 
     const [loading, setLoading] = useState(false);
     
@@ -52,12 +86,20 @@ const Checkout: React.FC = () => {
     const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
     const [hasFetchedAddresses, setHasFetchedAddresses] = useState(false);
 
-    const hasNoItems = !state || items.length === 0;
+    const hasNoItems = items.length === 0;
+
+    useEffect(() => {
+        if (checkoutState?.items?.length) {
+            sessionStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutState));
+        } else {
+            sessionStorage.removeItem(CHECKOUT_STORAGE_KEY);
+        }
+    }, [checkoutState]);
 
     useEffect(() => {
         if (hasNoItems) {
             message.error('无结算商品，请先选择商品');
-            navigate('/cart');
+            navigate('/cart', { replace: true });
         }
     }, [hasNoItems, navigate]);
 
@@ -185,8 +227,8 @@ const Checkout: React.FC = () => {
 
             const response = await api.post('/orders', orderData);
             message.success('订单提交成功！');
-            
-            // Clear cart after order created
+            sessionStorage.removeItem(CHECKOUT_STORAGE_KEY);
+
             await clearCart();
             
             if (response.data && response.data.id) {

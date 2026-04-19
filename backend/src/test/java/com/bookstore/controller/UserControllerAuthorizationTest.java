@@ -16,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,6 +68,16 @@ class UserControllerAuthorizationTest {
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isSameAs(summary);
+    }
+
+    @Test
+    void getAllUsersRejectsNonAdminUser() {
+        authenticate(1L, "USER");
+
+        assertThatThrownBy(() -> userController.getAllUsers())
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("无权查看所有用户信息");
+        verify(userService, never()).getAllUserSummaries();
     }
 
     private void authenticate(Long userId, String role) {

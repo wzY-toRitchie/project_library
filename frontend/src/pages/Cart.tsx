@@ -37,22 +37,20 @@ const Cart: React.FC = () => {
     const selectedCount = selectedCartItems.reduce((count, item) => count + item.quantity, 0);
 
     const handleCheckout = () => {
-        if (!isAuthenticated) {
-            message.warning('请先登录后再进行结算');
-            navigate('/login');
-            return;
-        }
-
         if (selectedCartItems.length === 0) {
             message.warning('请至少选择一件商品');
             return;
         }
 
-        navigate('/checkout', { 
-            state: { 
+        if (!isAuthenticated) {
+            message.warning('请先登录后再进行结算');
+        }
+
+        navigate('/checkout', {
+            state: {
                 items: selectedCartItems,
                 totalPrice: selectedTotal
-            } 
+            }
         });
     };
 

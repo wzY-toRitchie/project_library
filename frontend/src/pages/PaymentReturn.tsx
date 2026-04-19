@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { getPaymentStatus } from '../api/payment';
-import api from '../api';
 
 const PaymentReturn: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -23,16 +22,13 @@ const PaymentReturn: React.FC = () => {
                 const result = await getPaymentStatus(parseInt(outTradeNo));
 
                 if (result.status === 'TRADE_SUCCESS' || result.status === 'TRADE_FINISHED') {
-                    // 支付成功，更新订单状态
-                    await api.patch(`/orders/${outTradeNo}/status`, null, {
-                        params: { status: 'PAID' }
-                    });
                     setStatus('success');
                     message.success('支付成功！');
 
-                    // 跳转到订单确认页面
                     setTimeout(() => {
-                        navigate('/order-confirm', { state: { orderId: parseInt(outTradeNo), status: 'PAID' } });
+                        navigate('/order-confirm', {
+                            state: { orderId: parseInt(outTradeNo), status: 'PAID' }
+                        });
                     }, 2000);
                 } else {
                     setStatus('failed');

@@ -45,6 +45,9 @@ public class UserController {
     @GetMapping
     @Operation(summary = "获取所有用户", description = "获取所有用户列表（管理员）")
     public List<UserSummaryResponse> getAllUsers() {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权查看所有用户信息");
+        }
         return userService.getAllUserSummaries();
     }
 
@@ -52,13 +55,9 @@ public class UserController {
     @Operation(summary = "更新用户角色", description = "修改用户角色（管理员）")
     public ResponseEntity<User> updateUserRole(@PathVariable @NonNull Long id, @RequestParam @NonNull String role) {
         if (!SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).build();
+            throw new ForbiddenException("无权修改用户角色");
         }
-        try {
-            return ResponseEntity.ok(userService.updateRole(id, role));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(userService.updateRole(id, role));
     }
 
     @DeleteMapping("/{id}")
@@ -111,13 +110,9 @@ public class UserController {
             return ResponseEntity.status(401).build();
         }
 
-        try {
-            User updatedUser = userService.updateProfile(userId, request);
-            UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
-            return ResponseEntity.ok(summary != null ? summary : updatedUser);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
-        }
+        User updatedUser = userService.updateProfile(userId, request);
+        UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
+        return ResponseEntity.ok(summary != null ? summary : updatedUser);
     }
 
     @PutMapping("/{id}")
@@ -127,13 +122,9 @@ public class UserController {
         if (!SecurityUtils.isAdmin()) {
             return ResponseEntity.status(403).body(new MessageResponse("只有管理员可以编辑用户资料"));
         }
-        try {
-            User updatedUser = userService.updateUserByAdmin(id, request);
-            UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
-            return ResponseEntity.ok(summary != null ? summary : updatedUser);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
-        }
+        User updatedUser = userService.updateUserByAdmin(id, request);
+        UserSummaryResponse summary = userService.getUserSummary(updatedUser.getId()).orElse(null);
+        return ResponseEntity.ok(summary != null ? summary : updatedUser);
     }
 
     @PutMapping("/password")
@@ -149,11 +140,7 @@ public class UserController {
             return ResponseEntity.status(401).build();
         }
 
-        try {
-            userService.updatePassword(userId, request);
-            return ResponseEntity.ok(new MessageResponse("Password updated successfully"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
-        }
+        userService.updatePassword(userId, request);
+        return ResponseEntity.ok(new MessageResponse("Password updated successfully"));
     }
 }

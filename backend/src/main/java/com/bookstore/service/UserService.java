@@ -9,6 +9,8 @@ import com.bookstore.repository.UserRepository;
 import com.bookstore.repository.OrderRepository;
 import com.bookstore.payload.response.UserSummaryResponse;
 import com.bookstore.repository.NotificationRepository;
+import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -105,7 +107,7 @@ public class UserService {
 
     public User updateRole(@NonNull Long userId, @NonNull String role) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setRole(role);
         return userRepository.save(Objects.requireNonNull(user));
     }
@@ -123,7 +125,7 @@ public class UserService {
     public User updateProfile(@NonNull Long userId,
             @NonNull com.bookstore.payload.request.UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (request.getFullName() != null) {
             user.setFullName(request.getFullName());
@@ -134,7 +136,7 @@ public class UserService {
         // Email and Username updates might need validation for uniqueness if allowed
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email already in use");
+                throw new BadRequestException("Email already in use");
             }
             user.setEmail(request.getEmail());
         }
@@ -145,17 +147,17 @@ public class UserService {
     public User updateUserByAdmin(@NonNull Long userId,
             @NonNull com.bookstore.payload.request.UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             if (userRepository.existsByUsername(request.getUsername())) {
-                throw new RuntimeException("Username already exists");
+                throw new BadRequestException("Username already exists");
             }
             user.setUsername(request.getUsername());
         }
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email already in use");
+                throw new BadRequestException("Email already in use");
             }
             user.setEmail(request.getEmail());
         }
@@ -171,10 +173,10 @@ public class UserService {
     public void updatePassword(@NonNull Long userId,
             @NonNull com.bookstore.payload.request.UpdatePasswordRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("Current password is incorrect");
+            throw new BadRequestException("Current password is incorrect");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

@@ -2,6 +2,7 @@ package com.bookstore.service;
 
 import com.bookstore.entity.Address;
 import com.bookstore.entity.User;
+import com.bookstore.exception.ResourceNotFoundException;
 import com.bookstore.payload.request.AddressRequest;
 import com.bookstore.repository.AddressRepository;
 import com.bookstore.repository.UserRepository;
@@ -28,7 +29,7 @@ public class AddressService {
     @Transactional
     public List<Address> createAddress(@NonNull Long userId, @NonNull AddressRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Address address = new Address();
         address.setUser(user);
         address.setFullName(request.getFullName());
@@ -50,7 +51,7 @@ public class AddressService {
     @Transactional
     public List<Address> updateAddress(@NonNull Long userId, @NonNull Long addressId, @NonNull AddressRequest request) {
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
         if (request.getFullName() != null) {
             address.setFullName(request.getFullName());
         }
@@ -74,7 +75,7 @@ public class AddressService {
     @Transactional
     public List<Address> setDefault(@NonNull Long userId, @NonNull Long addressId) {
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
         clearDefault(userId);
         address.setDefault(true);
         addressRepository.save(address);
@@ -85,7 +86,7 @@ public class AddressService {
     @Transactional
     public List<Address> deleteAddress(@NonNull Long userId, @NonNull Long addressId) {
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
         boolean wasDefault = address.isDefault();
         addressRepository.delete(address);
         if (wasDefault) {

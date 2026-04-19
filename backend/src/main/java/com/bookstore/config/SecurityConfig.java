@@ -81,7 +81,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/coupons").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/settings").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reviews/book/**").permitAll()
                         .requestMatchers("/api/payment/notify").permitAll()
                         .requestMatchers("/api/uploads/**").hasRole("ADMIN")
                         .requestMatchers("/api/books/**").hasRole("ADMIN")

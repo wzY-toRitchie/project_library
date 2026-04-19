@@ -59,6 +59,10 @@ public class ReviewService {
         return reviewRepository.findAll();
     }
 
+    public Review getReviewById(@NonNull Long id) {
+        return reviewRepository.findById(id).orElse(null);
+    }
+
     /**
      * 删除评价
      */

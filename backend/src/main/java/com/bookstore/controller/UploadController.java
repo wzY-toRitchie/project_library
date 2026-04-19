@@ -1,19 +1,20 @@
 package com.bookstore.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/uploads")
@@ -23,6 +24,9 @@ public class UploadController {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".webp");
 
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
+
     @Operation(summary = "上传图书封面", description = "上传图书封面图片，支持 jpg/png/gif/webp 格式，最大 5MB")
     @PostMapping("/books")
     public ResponseEntity<Map<String, String>> uploadBookCover(@RequestParam("file") MultipartFile file) {
@@ -30,7 +34,6 @@ public class UploadController {
             return ResponseEntity.badRequest().build();
         }
 
-        // 检查文件大小
         if (file.getSize() > MAX_FILE_SIZE) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "文件大小不能超过5MB");
@@ -45,17 +48,16 @@ public class UploadController {
                 extension = originalName.substring(dotIndex).toLowerCase();
             }
 
-            // 检查文件类型
             if (!ALLOWED_EXTENSIONS.contains(extension)) {
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "只允许上传 jpg/png/gif/webp 格式的图片");
                 return ResponseEntity.badRequest().body(error);
             }
 
-            Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "books");
-            Files.createDirectories(uploadDir);
+            Path bookUploadDir = resolveUploadRoot().resolve("books");
+            Files.createDirectories(bookUploadDir);
             String filename = UUID.randomUUID().toString().replace("-", "") + extension;
-            Path target = uploadDir.resolve(filename);
+            Path target = bookUploadDir.resolve(filename);
             Files.copy(file.getInputStream(), target);
             Map<String, String> response = new HashMap<>();
             response.put("url", "/uploads/books/" + filename);
@@ -63,5 +65,9 @@ public class UploadController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    Path resolveUploadRoot() {
+        return Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 }

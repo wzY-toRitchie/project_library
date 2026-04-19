@@ -1,5 +1,6 @@
 package com.bookstore.controller;
 
+import com.bookstore.entity.Review;
 import com.bookstore.entity.User;
 import com.bookstore.exception.BadRequestException;
 import com.bookstore.exception.ForbiddenException;
@@ -68,12 +69,62 @@ class ReviewControllerAuthorizationTest {
         verify(reviewService, never()).getReviewsByUserId(2L);
     }
 
+    @Test
+    void getAllReviewsRejectsNonAdminUser() {
+        authenticate(1L, "USER");
+
+        assertThatThrownBy(() -> reviewController.getAllReviews())
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("无权查看所有评价");
+        verify(reviewService, never()).getAllReviews();
+    }
+
+    @Test
+    void deleteReviewAllowsOwner() {
+        authenticate(1L, "USER");
+        when(reviewService.getReviewById(10L)).thenReturn(reviewOwnedBy(1L));
+
+        reviewController.deleteReview(10L);
+
+        verify(reviewService).deleteReview(10L);
+    }
+
+    @Test
+    void deleteReviewAllowsAdmin() {
+        authenticate(99L, "ADMIN");
+        when(reviewService.getReviewById(10L)).thenReturn(reviewOwnedBy(1L));
+
+        reviewController.deleteReview(10L);
+
+        verify(reviewService).deleteReview(10L);
+    }
+
+    @Test
+    void deleteReviewRejectsOtherNonAdminUser() {
+        authenticate(2L, "USER");
+        when(reviewService.getReviewById(10L)).thenReturn(reviewOwnedBy(1L));
+
+        assertThatThrownBy(() -> reviewController.deleteReview(10L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("无权删除他人的评价");
+        verify(reviewService, never()).deleteReview(10L);
+    }
+
     private ReviewRequest reviewRequest(Long bookId) {
         ReviewRequest request = new ReviewRequest();
         request.setBookId(bookId);
         request.setRating(5);
         request.setComment("great book");
         return request;
+    }
+
+    private Review reviewOwnedBy(Long userId) {
+        User user = new User();
+        user.setId(userId);
+        Review review = new Review();
+        review.setId(10L);
+        review.setUser(user);
+        return review;
     }
 
     private void authenticate(Long userId, String role) {

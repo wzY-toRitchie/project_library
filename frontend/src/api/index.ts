@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+const LOGIN_PATH = '/login';
+const REDIRECT_PARAM = 'redirect';
+
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
     timeout: 120000,  // AI 推荐可能需要较长时间
@@ -52,12 +55,14 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Token 过期或无效，清除本地存储并跳转登录
             clearTokenCache();
             localStorage.removeItem('user');
-            // 避免在登录页重复跳转
-            if (!window.location.pathname.includes('/login')) {
-                window.location.href = '/login';
+
+            if (window.location.pathname !== LOGIN_PATH) {
+                const redirectTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+                const loginUrl = new URL(LOGIN_PATH, window.location.origin);
+                loginUrl.searchParams.set(REDIRECT_PARAM, redirectTarget);
+                window.location.assign(loginUrl.toString());
             }
         }
         return Promise.reject(error);

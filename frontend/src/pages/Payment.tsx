@@ -65,23 +65,11 @@ const Payment: React.FC = () => {
             return;
         }
 
-        // 其他支付方式（模拟支付）
-        const timeoutId = setTimeout(async () => {
-            try {
-                await api.patch(`/orders/${order.id}/status`, null, {
-                    params: { status: 'PAID' }
-                });
-                if (isMounted.current) {
-                    message.success('支付成功！');
-                    navigate('/order-confirm', { state: { orderId: order.id, status: 'PAID', totalPrice: order.totalPrice } });
-                }
-            } catch (error) {
-                console.error('Payment failed:', error);
-                if (isMounted.current) {
-                    message.error('支付失败，请重试');
-                }
-            } finally {
-                if (isMounted.current) setPaying(false);
+        // 其他支付方式仅展示当前状态，避免前端伪造支付成功
+        const timeoutId = setTimeout(() => {
+            if (isMounted.current) {
+                message.info('请使用支付宝完成支付，订单状态将以服务端结果为准');
+                setPaying(false);
             }
         }, 1500);
         return () => clearTimeout(timeoutId);
@@ -127,7 +115,7 @@ const Payment: React.FC = () => {
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
                                 <span className="material-symbols-outlined text-3xl text-primary" aria-hidden="true">schedule</span>
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400">订单提交成功，请尽快完成支付</p>
+                            <p className="text-slate-500 dark:text-slate-400">请使用支付宝完成支付，订单状态将由服务端确认。</p>
                             <div className="mt-4">
                                 <p className="text-sm text-slate-500">应付金额</p>
                                 <p className="text-4xl font-black text-primary tracking-tight">

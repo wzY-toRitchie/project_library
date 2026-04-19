@@ -7,6 +7,7 @@ import com.bookstore.entity.Notification;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ResourceNotFoundException;
 import com.bookstore.payload.request.OrderCreateRequest;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.OrderRepository;
@@ -60,7 +61,7 @@ public class OrderService {
 
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("订单不存在: ID=" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
     }
 
     @Transactional
@@ -136,14 +137,14 @@ public class OrderService {
     public Order createOrderFromRequest(OrderCreateRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
 
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.PENDING);
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new RuntimeException("订单项不能为空");
+            throw new BadRequestException("订单项不能为空");
         }
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -151,21 +152,21 @@ public class OrderService {
 
         for (OrderCreateRequest.OrderItemRequest itemRequest : request.getItems()) {
             if (itemRequest.getBookId() == null) {
-                throw new RuntimeException("图书ID不能为空");
+                throw new BadRequestException("图书ID不能为空");
             }
 
             Book book = bookRepository.findById(itemRequest.getBookId())
-                    .orElseThrow(() -> new RuntimeException("图书不存在: ID=" + itemRequest.getBookId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("图书不存在"));
 
             Integer quantity = itemRequest.getQuantity();
             if (quantity == null || quantity <= 0) {
-                throw new RuntimeException("数量必须大于0");
+                throw new BadRequestException("数量必须大于0");
             }
 
             // 原子扣减库存（防止并发超卖）
             int updated = bookRepository.decreaseStock(book.getId(), quantity);
             if (updated == 0) {
-                throw new RuntimeException("库存不足: " + book.getTitle() + " (剩余: " + book.getStock() + ")");
+                throw new BadRequestException("库存不足: " + book.getTitle() + " (剩余: " + book.getStock() + ")");
             }
             // 刷新book对象以获取最新库存
             book = bookRepository.findById(book.getId()).orElse(book);
@@ -227,7 +228,7 @@ public class OrderService {
 
     public Order updateOrderStatus(@NonNull Long id, @NonNull OrderStatus status) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("订单不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
 
         if (!isValidStatusTransition(order.getStatus(), status)) {
             throw new BadRequestException("非法订单状态流转: " + order.getStatus() + " -> " + status);
@@ -254,7 +255,7 @@ public class OrderService {
     @Transactional
     public Order cancelOrder(@NonNull Long orderId, String cancelReason) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("订单不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
 
         // 检查订单状态
         if (order.getStatus() != OrderStatus.PENDING) {

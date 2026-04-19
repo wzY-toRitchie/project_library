@@ -3,6 +3,7 @@ package com.bookstore.controller;
 import com.bookstore.entity.Review;
 import com.bookstore.exception.BadRequestException;
 import com.bookstore.exception.ForbiddenException;
+import com.bookstore.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.bookstore.payload.request.ReviewRequest;
@@ -38,6 +39,9 @@ public class ReviewController {
     @GetMapping
     @Operation(summary = "获取所有评价", description = "管理员获取所有评价记录")
     public List<Review> getAllReviews() {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权查看所有评价");
+        }
         return reviewService.getAllReviews();
     }
 
@@ -47,6 +51,17 @@ public class ReviewController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除评价", description = "管理员删除指定评价")
     public Map<String, Object> deleteReview(@PathVariable Long id) {
+        Review review = reviewService.getReviewById(id);
+        if (review == null) {
+            throw new ResourceNotFoundException("评价不存在");
+        }
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
+        if (!isAdmin && (review.getUser() == null || !currentUserId.equals(review.getUser().getId()))) {
+            throw new ForbiddenException("无权删除他人的评价");
+        }
+
         reviewService.deleteReview(id);
         return Map.of("message", "评价已删除");
     }
@@ -65,9 +80,9 @@ public class ReviewController {
 
         Review review = new Review();
         review.setUser(userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("用户不存在")));
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在")));
         review.setBook(bookRepository.findById(request.getBookId())
-                .orElseThrow(() -> new RuntimeException("图书不存在")));
+                .orElseThrow(() -> new ResourceNotFoundException("图书不存在")));
         review.setRating(request.getRating());
         review.setComment(request.getComment());
 

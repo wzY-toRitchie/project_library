@@ -3,10 +3,14 @@ package com.bookstore.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reviews")
+@Table(
+        name = "reviews",
+        uniqueConstraints = @UniqueConstraint(name = "uk_review_user_book", columnNames = {"user_id", "book_id"})
+)
 @Data
 public class Review {
     @Id
