@@ -7,6 +7,7 @@ import com.bookstore.entity.Notification;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ForbiddenException;
 import com.bookstore.exception.ResourceNotFoundException;
 import com.bookstore.payload.request.OrderCreateRequest;
 import com.bookstore.repository.BookRepository;
@@ -62,6 +63,14 @@ public class OrderService {
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
+    }
+
+    public Order getOrderForAccess(@NonNull Long orderId, @NonNull Long userId, boolean isAdmin) {
+        Order order = getOrderById(orderId);
+        if (!isAdmin && (order.getUser() == null || !userId.equals(order.getUser().getId()))) {
+            throw new ForbiddenException("无权操作此订单");
+        }
+        return order;
     }
 
     @Transactional
@@ -203,13 +212,12 @@ public class OrderService {
         if (request.getCouponId() != null) {
             try {
                 discount = couponService.useCoupon(userId, request.getCouponId(), totalPrice, null);
-                totalPrice = totalPrice.subtract(discount);
-                if (totalPrice.compareTo(BigDecimal.ZERO) < 0) {
-                    totalPrice = BigDecimal.ZERO;
-                }
             } catch (RuntimeException e) {
-                // Coupon invalid - proceed without discount
-                logger.warn("优惠券应用失败: {}", e.getMessage());
+                throw new BadRequestException(e.getMessage());
+            }
+            totalPrice = totalPrice.subtract(discount);
+            if (totalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                totalPrice = BigDecimal.ZERO;
             }
         }
         order.setTotalPrice(totalPrice);

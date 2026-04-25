@@ -8,6 +8,7 @@ import com.bookstore.entity.SystemSetting;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
+import com.bookstore.payload.request.OrderCreateRequest;
 import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.NotificationRepository;
 import com.bookstore.repository.OrderRepository;
@@ -164,6 +165,30 @@ class OrderServiceTest {
         verify(bookRepository, times(2)).findById(any(Long.class));
     }
 
+    @Test
+    void createOrderFromRequestRejectsInvalidCoupon() {
+        authenticate(1L, "USER");
+
+        User user = user(1L);
+        Book book = book(11L, "Book A", new BigDecimal("10.00"), 5);
+        OrderCreateRequest request = new OrderCreateRequest();
+        request.setCouponId(99L);
+        request.setItems(List.of(orderItemRequest(11L, 2)));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(bookRepository.findById(11L)).thenReturn(Optional.of(book), Optional.of(book));
+        when(bookRepository.decreaseStock(11L, 2)).thenReturn(1);
+        when(systemSettingService.getSettings()).thenReturn(new SystemSetting());
+        when(couponService.useCoupon(1L, 99L, new BigDecimal("20.00"), null))
+                .thenThrow(new RuntimeException("优惠券不可用"));
+
+        assertThatThrownBy(() -> orderService.createOrderFromRequest(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("优惠券不可用");
+
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
     private void authenticate(Long userId, String role) {
         User user = new User();
         user.setId(userId);
@@ -175,6 +200,16 @@ class OrderServiceTest {
         UserDetailsImpl principal = UserDetailsImpl.build(user);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
+
+    private User user(Long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername("user" + id);
+        user.setEmail("user" + id + "@example.com");
+        user.setPassword("encoded-password");
+        user.setRole("USER");
+        return user;
     }
 
     private Order order(OrderStatus status) {
@@ -202,5 +237,12 @@ class OrderServiceTest {
         item.setBook(book);
         item.setQuantity(quantity);
         return item;
+    }
+
+    private OrderCreateRequest.OrderItemRequest orderItemRequest(Long bookId, Integer quantity) {
+        OrderCreateRequest.OrderItemRequest itemRequest = new OrderCreateRequest.OrderItemRequest();
+        itemRequest.setBookId(bookId);
+        itemRequest.setQuantity(quantity);
+        return itemRequest;
     }
 }

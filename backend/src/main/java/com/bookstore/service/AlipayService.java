@@ -199,7 +199,11 @@ public class AlipayService {
                 return;
             }
 
-            // TRADE_SUCCESS 或 TRADE_FINISHED 表示支付成功
+            if (order.getStatus() != OrderStatus.PENDING) {
+                logger.warn("Ignore paid notify for order {} with local status {}", orderId, order.getStatus());
+                return;
+            }
+
             if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
                 order.setStatus(OrderStatus.PAID);
                 order.setPaymentMethod("ALIPAY");

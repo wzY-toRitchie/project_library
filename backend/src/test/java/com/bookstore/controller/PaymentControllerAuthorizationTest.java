@@ -5,9 +5,8 @@ import com.bookstore.entity.Order;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ForbiddenException;
 import com.bookstore.exception.ResourceNotFoundException;
-import com.bookstore.repository.OrderRepository;
-import com.bookstore.repository.UserRepository;
 import com.bookstore.security.services.UserDetailsImpl;
 import com.bookstore.service.AlipayService;
 import com.bookstore.service.OrderService;
@@ -23,7 +22,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,12 +34,6 @@ class PaymentControllerAuthorizationTest {
 
     @Mock
     private AlipayService alipayService;
-
-    @Mock
-    private OrderRepository orderRepository;
-
-    @Mock
-    private UserRepository userRepository;
 
     @Mock
     private OrderService orderService;
@@ -57,8 +49,7 @@ class PaymentControllerAuthorizationTest {
     @Test
     void createPaymentThrowsResourceNotFoundWhenOrderMissing() throws AlipayApiException {
         authenticate(1L, "USER");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(authenticatedUser(1L, "USER")));
-        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenThrow(new ResourceNotFoundException("订单不存在"));
 
         assertThatThrownBy(() -> paymentController.createPayment(10L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -69,7 +60,7 @@ class PaymentControllerAuthorizationTest {
     @Test
     void getPaymentStatusThrowsResourceNotFoundWhenOrderMissing() throws AlipayApiException {
         authenticate(1L, "USER");
-        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenThrow(new ResourceNotFoundException("订单不存在"));
 
         assertThatThrownBy(() -> paymentController.getPaymentStatus(10L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -80,21 +71,18 @@ class PaymentControllerAuthorizationTest {
     @Test
     void getPaymentStatusRejectsNonOwnerNonAdminUser() throws AlipayApiException {
         authenticate(2L, "USER");
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderOwnedBy(1L)));
-        when(orderService.isOrderOwnedByUser(10L, 2L)).thenReturn(false);
+        when(orderService.getOrderForAccess(10L, 2L, false)).thenThrow(new ForbiddenException("无权操作此订单"));
 
-        ResponseEntity<Map<String, String>> response = paymentController.getPaymentStatus(10L);
-
-        assertThat(response.getStatusCode().value()).isEqualTo(403);
-        assertThat(response.getBody()).containsEntry("error", "无权操作此订单");
+        assertThatThrownBy(() -> paymentController.getPaymentStatus(10L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("无权操作此订单");
         verify(alipayService, never()).queryOrder(10L);
     }
 
     @Test
     void getPaymentStatusAllowsOwner() throws AlipayApiException {
         authenticate(1L, "USER");
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderOwnedBy(1L)));
-        when(orderService.isOrderOwnedByUser(10L, 1L)).thenReturn(true);
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenReturn(orderOwnedBy(1L));
 
         ResponseEntity<Map<String, String>> response = paymentController.getPaymentStatus(10L);
 
@@ -105,7 +93,7 @@ class PaymentControllerAuthorizationTest {
     @Test
     void closeOrderThrowsResourceNotFoundWhenOrderMissing() throws AlipayApiException {
         authenticate(1L, "USER");
-        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenThrow(new ResourceNotFoundException("订单不存在"));
 
         assertThatThrownBy(() -> paymentController.closeOrder(10L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -116,20 +104,51 @@ class PaymentControllerAuthorizationTest {
     @Test
     void closeOrderRejectsNonOwnerNonAdminUser() throws AlipayApiException {
         authenticate(2L, "USER");
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderOwnedBy(1L)));
-        when(orderService.isOrderOwnedByUser(10L, 2L)).thenReturn(false);
+        when(orderService.getOrderForAccess(10L, 2L, false)).thenThrow(new ForbiddenException("无权操作此订单"));
+
+        assertThatThrownBy(() -> paymentController.closeOrder(10L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("无权操作此订单");
+        verify(alipayService, never()).closeOrder(10L);
+    }
+
+    @Test
+    void closeOrderCancelsLocalOrderWhenGatewayCloseSucceeds() throws AlipayApiException {
+        authenticate(1L, "USER");
+        Order order = orderOwnedBy(1L);
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenReturn(order);
+        when(alipayService.closeOrder(10L)).thenReturn(true);
+        Order cancelled = orderOwnedBy(1L);
+        cancelled.setStatus(OrderStatus.CANCELLED);
+        when(orderService.getOrderById(10L)).thenReturn(cancelled);
 
         ResponseEntity<Map<String, Object>> response = paymentController.closeOrder(10L);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(403);
-        assertThat(response.getBody()).containsEntry("error", "无权操作此订单");
-        verify(alipayService, never()).closeOrder(10L);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).containsEntry("success", true);
+        assertThat(response.getBody()).containsEntry("status", OrderStatus.CANCELLED);
+        verify(orderService).cancelOrder(10L, "支付宝关闭订单");
+    }
+
+    @Test
+    void closeOrderReturnsOriginalStatusWhenGatewayCloseFails() throws AlipayApiException {
+        authenticate(1L, "USER");
+        Order order = orderOwnedBy(1L);
+        when(orderService.getOrderForAccess(10L, 1L, false)).thenReturn(order);
+        when(alipayService.closeOrder(10L)).thenReturn(false);
+
+        ResponseEntity<Map<String, Object>> response = paymentController.closeOrder(10L);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).containsEntry("success", false);
+        assertThat(response.getBody()).containsEntry("status", OrderStatus.PENDING);
+        verify(orderService, never()).cancelOrder(10L, "支付宝关闭订单");
     }
 
     @Test
     void refundThrowsResourceNotFoundWhenOrderMissing() throws AlipayApiException {
         authenticate(99L, "ADMIN");
-        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+        when(orderService.getOrderById(10L)).thenThrow(new ResourceNotFoundException("订单不存在"));
 
         assertThatThrownBy(() -> paymentController.refund(10L, "0"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -151,7 +170,9 @@ class PaymentControllerAuthorizationTest {
     @Test
     void refundRejectsInvalidAmount() throws AlipayApiException {
         authenticate(99L, "ADMIN");
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderOwnedBy(1L)));
+        Order order = orderOwnedBy(1L);
+        order.setStatus(OrderStatus.PAID);
+        when(orderService.getOrderById(10L)).thenReturn(order);
 
         assertThatThrownBy(() -> paymentController.refund(10L, "abc"))
                 .isInstanceOf(BadRequestException.class)
@@ -160,9 +181,35 @@ class PaymentControllerAuthorizationTest {
     }
 
     @Test
+    void refundRejectsPendingOrder() throws AlipayApiException {
+        authenticate(99L, "ADMIN");
+        when(orderService.getOrderById(10L)).thenReturn(orderOwnedBy(1L));
+
+        assertThatThrownBy(() -> paymentController.refund(10L, "0"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("当前订单状态不支持退款");
+        verify(alipayService, never()).refund(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void refundRejectsCancelledOrder() throws AlipayApiException {
+        authenticate(99L, "ADMIN");
+        Order order = orderOwnedBy(1L);
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderService.getOrderById(10L)).thenReturn(order);
+
+        assertThatThrownBy(() -> paymentController.refund(10L, "0"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("当前订单状态不支持退款");
+        verify(alipayService, never()).refund(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void refundAllowsAdmin() throws AlipayApiException {
         authenticate(99L, "ADMIN");
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderOwnedBy(1L)));
+        Order order = orderOwnedBy(1L);
+        order.setStatus(OrderStatus.PAID);
+        when(orderService.getOrderById(10L)).thenReturn(order);
         when(alipayService.refund(10L, BigDecimal.valueOf(88))).thenReturn(true);
 
         ResponseEntity<Map<String, Object>> response = paymentController.refund(10L, "0");

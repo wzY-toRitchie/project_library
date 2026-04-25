@@ -6,6 +6,7 @@ import com.bookstore.entity.Category;
 import com.bookstore.entity.Coupon;
 import com.bookstore.entity.Order;
 import com.bookstore.entity.OrderItem;
+import com.bookstore.entity.Review;
 import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.repository.AddressRepository;
@@ -13,6 +14,7 @@ import com.bookstore.repository.BookRepository;
 import com.bookstore.repository.CategoryRepository;
 import com.bookstore.repository.CouponRepository;
 import com.bookstore.repository.OrderRepository;
+import com.bookstore.repository.ReviewRepository;
 import com.bookstore.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +43,7 @@ public class DataInitializer {
                         OrderRepository orderRepository,
                         AddressRepository addressRepository,
                         CouponRepository couponRepository,
+                        ReviewRepository reviewRepository,
                         PasswordEncoder passwordEncoder) {
                 return args -> {
                         // Initialize Users
@@ -53,6 +56,11 @@ public class DataInitializer {
                                 admin.setPassword(passwordEncoder.encode("Admin@123"));
                                 admin.setEmail("admin@example.com");
                                 admin.setRole("ADMIN");
+                        } else {
+                                admin = userRepository.findByUsername("admin").orElse(null);
+                                if (admin != null && !passwordEncoder.matches("Admin@123", admin.getPassword())) {
+                                        admin.setPassword(passwordEncoder.encode("Admin@123"));
+                                }
                         }
 
                         if (!userRepository.existsByUsername("user")) {
@@ -61,6 +69,11 @@ public class DataInitializer {
                                 user.setPassword(passwordEncoder.encode("User@1234"));
                                 user.setEmail("user@example.com");
                                 user.setRole("USER");
+                        } else {
+                                user = userRepository.findByUsername("user").orElse(null);
+                                if (user != null && !passwordEncoder.matches("User@1234", user.getPassword())) {
+                                        user.setPassword(passwordEncoder.encode("User@1234"));
+                                }
                         }
 
                         List<User> initialUsers = new ArrayList<>();
@@ -620,6 +633,233 @@ public class DataInitializer {
                                         c.setEndTime(java.time.LocalDateTime.now().plusMonths(3));
                                         couponRepository.save(c);
                                 }
+                        }
+
+                        // Initialize reviews
+                        List<Review> reviewsToSave = new ArrayList<>();
+                        Map<String, Book> bookMap = new HashMap<>();
+                        for (Book b : bookRepository.findAll()) {
+                                if (b.getTitle() != null) {
+                                        bookMap.put(b.getTitle().trim(), b);
+                                }
+                        }
+                        Book javaCore = bookMap.get("Java 核心技术");
+                        Book csApp = bookMap.get("深入理解计算机系统");
+                        Book threeBody = bookMap.get("三体");
+                        Book cleanCode = bookMap.get("代码整洁之道");
+                        Book designPatterns = bookMap.get("设计模式");
+                        Book cosmos = bookMap.get("时间简史");
+                        Book wander = bookMap.get("银河系漫游指南");
+                        Book python = bookMap.get("Python编程：从入门到实践");
+                        Book humanHistory = bookMap.get("人类简史");
+                        Book alive = bookMap.get("活着");
+                        Book galaxyEmpire = bookMap.get("银河帝国");
+                        Book whiteNight = bookMap.get("白夜行");
+                        Book algorithm = bookMap.get("算法导论");
+                        Book effectiveJava = bookMap.get("Effective Java");
+                        Book springBoot = bookMap.get("Spring Boot 实战");
+                        Book kiterunner = bookMap.get("追风筝的人");
+                        Book ordinaryWorld = bookMap.get("平凡的世界");
+                        Book huangcheng = bookMap.get("黑客与画家");
+
+                        // Review seed users (use existing user/admin variables from outer scope)
+                        // User alice = userRepository.findByUsername("alice").orElse(null); // kept below
+
+                        User alice = userRepository.findByUsername("alice").orElse(null);
+                        User bob = userRepository.findByUsername("bob").orElse(null);
+                        User charlie = userRepository.findByUsername("charlie").orElse(null);
+                        User diana = userRepository.findByUsername("diana").orElse(null);
+                        User edward = userRepository.findByUsername("edward").orElse(null);
+                        User frank = userRepository.findByUsername("frank").orElse(null);
+                        User grace = userRepository.findByUsername("grace").orElse(null);
+                        User helen = userRepository.findByUsername("helen").orElse(null);
+
+                        if (javaCore != null && admin != null) {
+                                Review r = new Review();
+                                r.setUser(admin);
+                                r.setBook(javaCore);
+                                r.setRating(5);
+                                r.setComment("Java学习必读经典！内容全面，从基础到进阶都有很好的指导，强烈推荐。");
+                                reviewsToSave.add(r);
+                        }
+                        if (javaCore != null && bob != null) {
+                                Review r = new Review();
+                                r.setUser(bob);
+                                r.setBook(javaCore);
+                                r.setRating(4);
+                                r.setComment("内容很丰富，但是对新手来说有点厚，建议分阶段阅读。");
+                                reviewsToSave.add(r);
+                        }
+                        if (csApp != null && alice != null) {
+                                Review r = new Review();
+                                r.setUser(alice);
+                                r.setBook(csApp);
+                                r.setRating(5);
+                                r.setComment("计算机领域的圣经，读完对操作系统、网络、编译器等有了更深刻的理解。");
+                                reviewsToSave.add(r);
+                        }
+                        if (threeBody != null && user != null) {
+                                Review r = new Review();
+                                r.setUser(user);
+                                r.setBook(threeBody);
+                                r.setRating(5);
+                                r.setComment("震撼！大刘的想象力令人叹为观止，硬科幻的巅峰之作。");
+                                reviewsToSave.add(r);
+                        }
+                        if (threeBody != null && charlie != null) {
+                                Review r = new Review();
+                                r.setUser(charlie);
+                                r.setBook(threeBody);
+                                r.setRating(4);
+                                r.setComment("故事结构紧凑，物理设定严谨，不过中间部分节奏稍微慢了一些。");
+                                reviewsToSave.add(r);
+                        }
+                        if (cleanCode != null && edward != null) {
+                                Review r = new Review();
+                                r.setUser(edward);
+                                r.setBook(cleanCode);
+                                r.setRating(5);
+                                r.setComment("每个程序员都应该读一遍。命名、函数设计、注释，细节决定代码质量。");
+                                reviewsToSave.add(r);
+                        }
+                        if (cleanCode != null && frank != null) {
+                                Review r = new Review();
+                                r.setUser(frank);
+                                r.setBook(cleanCode);
+                                r.setRating(3);
+                                r.setComment("理念很好，但是部分观点在现代语言和框架下有些过时了。");
+                                reviewsToSave.add(r);
+                        }
+                        if (designPatterns != null && grace != null) {
+                                Review r = new Review();
+                                r.setUser(grace);
+                                r.setBook(designPatterns);
+                                r.setRating(5);
+                                r.setComment("Gof四人帮的经典，23种设计模式讲解清晰，案例实用。面试和实战都很用得上。");
+                                reviewsToSave.add(r);
+                        }
+                        if (python != null && diana != null) {
+                                Review r = new Review();
+                                r.setUser(diana);
+                                r.setBook(python);
+                                r.setRating(5);
+                                r.setComment("Python入门首选！前半部分讲基础很详细，后半部分的项目实践也很有参考价值。");
+                                reviewsToSave.add(r);
+                        }
+                        if (humanHistory != null && alice != null) {
+                                Review r = new Review();
+                                r.setUser(alice);
+                                r.setBook(humanHistory);
+                                r.setRating(4);
+                                r.setComment("视角宏大，认知颠覆。作者把人类历史的脉络梳理得很清楚，值得一读。");
+                                reviewsToSave.add(r);
+                        }
+                        if (humanHistory != null && helen != null) {
+                                Review r = new Review();
+                                r.setUser(helen);
+                                r.setBook(humanHistory);
+                                r.setRating(5);
+                                r.setComment("读了两遍还是觉得精彩，从认知革命到科学革命，每个章节都很吸引人。");
+                                reviewsToSave.add(r);
+                        }
+                        if (alive != null && bob != null) {
+                                Review r = new Review();
+                                r.setUser(bob);
+                                r.setBook(alive);
+                                r.setRating(5);
+                                r.setComment("余华笔下的苦难与坚韧，读完后心里沉甸甸的，但也能感受到生命的力量。");
+                                reviewsToSave.add(r);
+                        }
+                        if (alive != null && charlie != null) {
+                                Review r = new Review();
+                                r.setUser(charlie);
+                                r.setBook(alive);
+                                r.setRating(5);
+                                r.setComment("语言朴实但极具感染力，福贵的故事让人深思。");
+                                reviewsToSave.add(r);
+                        }
+                        if (galaxyEmpire != null && diana != null) {
+                                Review r = new Review();
+                                r.setUser(diana);
+                                r.setBook(galaxyEmpire);
+                                r.setRating(5);
+                                r.setComment("阿西莫夫的宏大叙事，心理史学的设定太棒了，期待后续的续集。");
+                                reviewsToSave.add(r);
+                        }
+                        if (whiteNight != null && edward != null) {
+                                Review r = new Review();
+                                r.setUser(edward);
+                                r.setBook(whiteNight);
+                                r.setRating(4);
+                                r.setComment("东野圭吾最好的小说之一，悬念一直保持到最后，结局让人回味很久。");
+                                reviewsToSave.add(r);
+                        }
+                        if (algorithm != null && frank != null) {
+                                Review r = new Review();
+                                r.setUser(frank);
+                                r.setBook(algorithm);
+                                r.setRating(4);
+                                r.setComment("算法领域的权威教材，数学推导严谨，习题有挑战性，适合作为参考书。");
+                                reviewsToSave.add(r);
+                        }
+                        if (effectiveJava != null && grace != null) {
+                                Review r = new Review();
+                                r.setUser(grace);
+                                r.setBook(effectiveJava);
+                                r.setRating(5);
+                                r.setComment("每一条Item都是实战经验总结，Java进阶必读书，强烈推荐第二遍精读。");
+                                reviewsToSave.add(r);
+                        }
+                        if (springBoot != null && helen != null) {
+                                Review r = new Review();
+                                r.setUser(helen);
+                                r.setBook(springBoot);
+                                r.setRating(4);
+                                r.setComment("Spring Boot入门的好教材，案例丰富，跟着做就能搭建完整项目。");
+                                reviewsToSave.add(r);
+                        }
+                        if (cosmos != null && user != null) {
+                                Review r = new Review();
+                                r.setUser(user);
+                                r.setBook(cosmos);
+                                r.setRating(5);
+                                r.setComment("霍金带你思考宇宙的起源，通俗物理学经典，读完对时间有了全新的认识。");
+                                reviewsToSave.add(r);
+                        }
+                        if (wander != null && alice != null) {
+                                Review r = new Review();
+                                r.setUser(alice);
+                                r.setBook(wander);
+                                r.setRating(4);
+                                r.setComment("充满英式幽默的太空冒险，脑洞大开，轻松愉快中不乏哲理。");
+                                reviewsToSave.add(r);
+                        }
+                        if (kiterunner != null && bob != null) {
+                                Review r = new Review();
+                                r.setUser(bob);
+                                r.setBook(kiterunner);
+                                r.setRating(5);
+                                r.setComment("为你，千千万万遍。这句话让我泪流满面，关于友情和救赎的最美故事。");
+                                reviewsToSave.add(r);
+                        }
+                        if (ordinaryWorld != null && charlie != null) {
+                                Review r = new Review();
+                                r.setUser(charlie);
+                                r.setBook(ordinaryWorld);
+                                r.setRating(5);
+                                r.setComment("路遥笔下的平凡与伟大，孙少安孙少平兄弟的奋斗史激励了几代人。");
+                                reviewsToSave.add(r);
+                        }
+                        if (huangcheng != null && diana != null) {
+                                Review r = new Review();
+                                r.setUser(diana);
+                                r.setBook(huangcheng);
+                                r.setRating(4);
+                                r.setComment("Paul Graham的独特视角，把编程和创业讲得既有深度又有趣。");
+                                reviewsToSave.add(r);
+                        }
+                        if (!reviewsToSave.isEmpty()) {
+                                reviewRepository.saveAll(reviewsToSave);
                         }
                 };
         }

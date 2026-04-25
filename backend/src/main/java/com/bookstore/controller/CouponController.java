@@ -1,9 +1,11 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.Coupon;
-import com.bookstore.entity.CouponPointsRule;
 import com.bookstore.entity.UserCoupon;
 import com.bookstore.payload.request.CouponPointsRuleRequest;
+import com.bookstore.payload.response.PublicCouponResponse;
+import com.bookstore.payload.response.RedeemableCouponResponse;
+import com.bookstore.payload.response.UserCouponResponse;
 import com.bookstore.security.SecurityUtils;
 import com.bookstore.service.CouponService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,8 +33,10 @@ public class CouponController {
 
     @Operation(summary = "获取所有可用优惠券", description = "获取当前可用的优惠券列表，供用户领取")
     @GetMapping
-    public ResponseEntity<List<Coupon>> getAvailableCoupons() {
-        List<Coupon> coupons = couponService.getAvailableCoupons();
+    public ResponseEntity<List<PublicCouponResponse>> getAvailableCoupons() {
+        List<PublicCouponResponse> coupons = couponService.getAvailableCoupons().stream()
+                .map(PublicCouponResponse::from)
+                .toList();
         return ResponseEntity.ok(coupons);
     }
 
@@ -45,17 +49,21 @@ public class CouponController {
 
     @Operation(summary = "获取我的优惠券", description = "获取当前用户所有已领取的优惠券")
     @GetMapping("/my")
-    public ResponseEntity<List<UserCoupon>> getMyCoupons() {
+    public ResponseEntity<List<UserCouponResponse>> getMyCoupons() {
         Long userId = SecurityUtils.getCurrentUserId();
-        List<UserCoupon> userCoupons = couponService.getUserCoupons(userId);
+        List<UserCouponResponse> userCoupons = couponService.getUserCoupons(userId).stream()
+                .map(UserCouponResponse::from)
+                .toList();
         return ResponseEntity.ok(userCoupons);
     }
 
     @Operation(summary = "获取我的可用优惠券", description = "获取当前用户已领取且未使用的优惠券")
     @GetMapping("/available")
-    public ResponseEntity<List<UserCoupon>> getAvailableUserCoupons() {
+    public ResponseEntity<List<UserCouponResponse>> getAvailableUserCoupons() {
         Long userId = SecurityUtils.getCurrentUserId();
-        List<UserCoupon> userCoupons = couponService.getAvailableUserCoupons(userId);
+        List<UserCouponResponse> userCoupons = couponService.getAvailableUserCoupons(userId).stream()
+                .map(UserCouponResponse::from)
+                .toList();
         return ResponseEntity.ok(userCoupons);
     }
 
@@ -65,7 +73,7 @@ public class CouponController {
         try {
             Long userId = SecurityUtils.getCurrentUserId();
             UserCoupon userCoupon = couponService.claimCoupon(userId, id);
-            return ResponseEntity.ok(userCoupon);
+            return ResponseEntity.ok(UserCouponResponse.from(userCoupon));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -161,7 +169,7 @@ public class CouponController {
             UserCoupon userCoupon = couponService.redeemCouponWithPoints(userId, id);
             Map<String, Object> response = new HashMap<>();
             response.put("message", "积分兑换成功");
-            response.put("userCoupon", userCoupon);
+            response.put("userCoupon", UserCouponResponse.from(userCoupon));
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -170,7 +178,7 @@ public class CouponController {
 
     @Operation(summary = "可积分兑换的优惠券列表", description = "获取所有支持积分兑换的优惠券")
     @GetMapping("/redeem")
-    public ResponseEntity<List<Map<String, Object>>> getRedeemableCoupons() {
+    public ResponseEntity<List<RedeemableCouponResponse>> getRedeemableCoupons() {
         return ResponseEntity.ok(couponService.getAvailableRedeemCoupons());
     }
 

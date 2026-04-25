@@ -2,6 +2,7 @@ package com.bookstore.service;
 
 import com.bookstore.entity.SystemSetting;
 import com.bookstore.payload.request.SystemSettingRequest;
+import com.bookstore.payload.response.SystemSettingResponse;
 import com.bookstore.repository.SystemSettingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,6 +22,10 @@ public class SystemSettingService {
     public SystemSetting getSettings() {
         return systemSettingRepository.findById(SETTINGS_ID)
                 .orElseGet(() -> systemSettingRepository.save(Objects.requireNonNull(buildDefaultSettings())));
+    }
+
+    public SystemSettingResponse getPublicSettings() {
+        return toResponse(getSettings());
     }
 
     @CacheEvict(value = "settings", allEntries = true)
@@ -63,6 +68,24 @@ public class SystemSettingService {
             settings.setAiSystemPrompt(request.getAiSystemPrompt());
         }
         return systemSettingRepository.save(Objects.requireNonNull(settings));
+    }
+
+    public SystemSettingResponse updatePublicSettings(@NonNull SystemSettingRequest request) {
+        return toResponse(updateSettings(request));
+    }
+
+    private SystemSettingResponse toResponse(SystemSetting settings) {
+        return new SystemSettingResponse(
+                settings.getStoreName(),
+                settings.getSupportEmail(),
+                settings.getSupportPhone(),
+                settings.getLowStockThreshold(),
+                settings.getDashboardRange(),
+                settings.getAiModel(),
+                settings.getAiBaseUrl(),
+                settings.getAiTemperature(),
+                settings.getAiMaxTokens(),
+                settings.getAiSystemPrompt());
     }
 
     private @NonNull SystemSetting buildDefaultSettings() {

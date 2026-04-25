@@ -54,9 +54,9 @@ public class AuthController {
     
     // 检查是否被锁定
     if (loginAttemptService.isBlocked(username)) {
-      long remainingMinutes = loginAttemptService.getRemainingLockTime(username);
+      logger.warn("Blocked login attempt for user: {}", username);
       return ResponseEntity.badRequest()
-          .body(new MessageResponse("账户已被锁定，请在 " + remainingMinutes + " 分钟后重试"));
+          .body(new MessageResponse("用户名或密码错误"));
     }
     
     try {
@@ -87,10 +87,9 @@ public class AuthController {
     } catch (org.springframework.security.authentication.BadCredentialsException e) {
       // 密码错误 - 记录失败次数
       loginAttemptService.loginFailed(username);
-      int remainingAttempts = loginAttemptService.getRemainingAttempts(username);
       logger.warn("Bad credentials for user: {}", username);
       return ResponseEntity.badRequest()
-          .body(new MessageResponse("用户名或密码错误，还剩 " + remainingAttempts + " 次尝试机会"));
+          .body(new MessageResponse("用户名或密码错误"));
     } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
       // 用户不存在 - 不记录失败次数（防止用户名枚举攻击）
       logger.warn("User not found: {}", username);
@@ -119,26 +118,6 @@ public class AuthController {
           .body(new MessageResponse("该账号已被注册"));
     }
 
-    // 密码强度验证
-    String password = signUpRequest.getPassword();
-    if (password.length() < 8) {
-      return ResponseEntity.badRequest()
-          .body(new MessageResponse("密码长度至少8位"));
-    }
-    if (!password.matches(".*[A-Z].*")) {
-      return ResponseEntity.badRequest()
-          .body(new MessageResponse("密码必须包含至少一个大写字母"));
-    }
-    if (!password.matches(".*[a-z].*")) {
-      return ResponseEntity.badRequest()
-          .body(new MessageResponse("密码必须包含至少一个小写字母"));
-    }
-    if (!password.matches(".*[0-9].*")) {
-      return ResponseEntity.badRequest()
-          .body(new MessageResponse("密码必须包含至少一个数字"));
-    }
-
-    // Create new user's account
     User user = new User();
     user.setUsername(signUpRequest.getUsername());
     user.setEmail(signUpRequest.getEmail());

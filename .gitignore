@@ -13,6 +13,9 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 pom.xml.next
 release.properties
+backend/dependency-list.txt
+backend/effective-pom
+backend/effective-pom.xml
 
 # IDE
 .idea/
@@ -43,10 +46,13 @@ frontend/dist/
 
 # Skills
 .agents/
+.baoyu-skills/
 .claude/
+.opencode/
 .qoder/
 .trae/
 .windsurf/
+%TEMP%/
 
 # Misc
 nul

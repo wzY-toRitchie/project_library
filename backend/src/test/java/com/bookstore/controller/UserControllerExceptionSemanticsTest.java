@@ -87,7 +87,7 @@ class UserControllerExceptionSemanticsTest {
         authenticate(1L, "USER");
         UpdatePasswordRequest request = new UpdatePasswordRequest();
         request.setCurrentPassword("wrong-password");
-        request.setNewPassword("new-password-123");
+        request.setNewPassword("Weakpass1");
 
         doThrow(new BadRequestException("Current password is incorrect"))
                 .when(userService).updatePassword(1L, request);

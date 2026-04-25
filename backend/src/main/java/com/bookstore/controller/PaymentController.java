@@ -1,12 +1,10 @@
 package com.bookstore.controller;
 
 import com.bookstore.entity.Order;
-import com.bookstore.entity.User;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
+import com.bookstore.exception.ForbiddenException;
 import com.bookstore.exception.ResourceNotFoundException;
-import com.bookstore.repository.OrderRepository;
-import com.bookstore.repository.UserRepository;
 import com.bookstore.security.SecurityUtils;
 import com.bookstore.service.AlipayService;
 import com.bookstore.service.OrderService;
@@ -30,12 +28,6 @@ public class PaymentController {
     private AlipayService alipayService;
 
     @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private OrderService orderService;
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PaymentController.class);
@@ -46,17 +38,7 @@ public class PaymentController {
             @Parameter(description = "订单 ID") @PathVariable Long orderId) {
         try {
             Long currentUserId = SecurityUtils.getCurrentUserId();
-            User currentUser = userRepository.findById(currentUserId).orElse(null);
-            if (currentUser == null) {
-                return ResponseEntity.status(401).body(Map.of("error", "请先登录"));
-            }
-
-            Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
-
-            if (!order.getUser().getId().equals(currentUser.getId())) {
-                return ResponseEntity.status(403).body(Map.of("error", "无权操作此订单"));
-            }
+            Order order = orderService.getOrderForAccess(orderId, currentUserId, false);
 
             if (order.getStatus() != OrderStatus.PENDING) {
                 return ResponseEntity.badRequest().body(Map.of("error", "订单状态不允许支付"));
@@ -81,12 +63,10 @@ public class PaymentController {
     @GetMapping("/status/{orderId}")
     public ResponseEntity<Map<String, String>> getPaymentStatus(
             @Parameter(description = "订单 ID") @PathVariable Long orderId) {
-        ResponseEntity<Map<String, String>> forbidden = validateOrderAccess(orderId);
-        if (forbidden != null) {
-            return forbidden;
-        }
-
         try {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            boolean isAdmin = SecurityUtils.isAdmin();
+            orderService.getOrderForAccess(orderId, currentUserId, isAdmin);
             String status = alipayService.queryOrder(orderId);
 
             if (status == null) {
@@ -98,6 +78,8 @@ public class PaymentController {
             result.put("orderId", orderId.toString());
 
             return ResponseEntity.ok(result);
+        } catch (ResourceNotFoundException | ForbiddenException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("查询支付状态失败", e);
             return ResponseEntity.status(500).body(Map.of("error", "查询支付状态失败"));
@@ -125,19 +107,25 @@ public class PaymentController {
     @PostMapping("/close/{orderId}")
     public ResponseEntity<Map<String, Object>> closeOrder(
             @Parameter(description = "订单 ID") @PathVariable Long orderId) {
-        ResponseEntity<Map<String, Object>> forbidden = validateOrderObjectAccess(orderId);
-        if (forbidden != null) {
-            return forbidden;
-        }
-
         try {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            boolean isAdmin = SecurityUtils.isAdmin();
+            Order order = orderService.getOrderForAccess(orderId, currentUserId, isAdmin);
             boolean success = alipayService.closeOrder(orderId);
+
+            if (success) {
+                orderService.cancelOrder(orderId, "支付宝关闭订单");
+                order = orderService.getOrderById(orderId);
+            }
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", success);
             result.put("orderId", orderId);
+            result.put("status", order.getStatus());
 
             return ResponseEntity.ok(result);
+        } catch (ResourceNotFoundException | ForbiddenException | BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("关闭订单失败", e);
             return ResponseEntity.status(500).body(Map.of("error", "关闭订单失败", "success", false));
@@ -154,8 +142,10 @@ public class PaymentController {
         }
 
         try {
-            Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
+            Order order = orderService.getOrderById(orderId);
+            if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CANCELLED) {
+                throw new BadRequestException("当前订单状态不支持退款");
+            }
 
             BigDecimal refundAmount = parseRefundAmount(amount, order.getTotalPrice());
             boolean success = alipayService.refund(orderId, refundAmount);
@@ -184,24 +174,5 @@ public class PaymentController {
         } catch (NumberFormatException e) {
             throw new BadRequestException("退款金额格式无效");
         }
-    }
-
-
-    private ResponseEntity<Map<String, String>> validateOrderAccess(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
-        if (!SecurityUtils.isAdmin() && !orderService.isOrderOwnedByUser(orderId, SecurityUtils.getCurrentUserId())) {
-            return ResponseEntity.status(403).body(Map.of("error", "无权操作此订单"));
-        }
-        return null;
-    }
-
-    private ResponseEntity<Map<String, Object>> validateOrderObjectAccess(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
-        if (!SecurityUtils.isAdmin() && !orderService.isOrderOwnedByUser(orderId, SecurityUtils.getCurrentUserId())) {
-            return ResponseEntity.status(403).body(Map.of("error", "无权操作此订单"));
-        }
-        return null;
     }
 }

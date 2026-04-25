@@ -99,7 +99,7 @@ public class OrderController {
             if (!isOwner) {
                 return ResponseEntity.status(403).body("无权修改他人订单状态");
             }
-            if (orderStatus != OrderStatus.PAID && orderStatus != OrderStatus.COMPLETED) {
+            if (orderStatus != OrderStatus.COMPLETED) {
                 return ResponseEntity.status(403).body("无权执行此操作");
             }
         }

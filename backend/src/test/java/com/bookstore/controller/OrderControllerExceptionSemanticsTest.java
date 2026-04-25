@@ -96,6 +96,18 @@ class OrderControllerExceptionSemanticsTest {
     }
 
     @Test
+    void updateOrderStatusRejectsPaidTransitionForOwner() {
+        authenticate(2L, "USER");
+        when(orderService.isOrderOwnedByUser(10L, 2L)).thenReturn(true);
+
+        ResponseEntity<?> response = orderController.updateOrderStatus(10L, "PAID");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(403);
+        assertThat(response.getBody()).isEqualTo("无权执行此操作");
+        verify(orderService, never()).updateOrderStatus(10L, OrderStatus.PAID);
+    }
+
+    @Test
     void cancelOrderPropagatesResourceNotFoundException() {
         authenticate(1L, "ADMIN");
         when(orderService.cancelOrder(10L, "changed mind"))

@@ -5,6 +5,9 @@ import com.bookstore.entity.CouponPointsRule;
 import com.bookstore.entity.User;
 import com.bookstore.entity.UserCoupon;
 import com.bookstore.payload.request.CouponPointsRuleRequest;
+import com.bookstore.payload.response.CouponPointsRuleSummaryResponse;
+import com.bookstore.payload.response.PublicCouponResponse;
+import com.bookstore.payload.response.RedeemableCouponResponse;
 import com.bookstore.repository.CouponPointsRuleRepository;
 import com.bookstore.repository.CouponRepository;
 import com.bookstore.repository.UserCouponRepository;
@@ -18,7 +21,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -222,16 +224,15 @@ public class CouponService {
     /**
      * 获取可积分兑换的优惠券列表
      */
-    public List<Map<String, Object>> getAvailableRedeemCoupons() {
+    public List<RedeemableCouponResponse> getAvailableRedeemCoupons() {
         List<Coupon> availableCoupons = couponRepository.findAvailableCoupons(LocalDateTime.now());
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<RedeemableCouponResponse> result = new ArrayList<>();
 
         for (Coupon coupon : availableCoupons) {
             couponPointsRuleRepository.findByCouponId(coupon.getId()).ifPresent(rule -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("coupon", coupon);
-                item.put("pointsRule", rule);
-                result.add(item);
+                result.add(new RedeemableCouponResponse(
+                        PublicCouponResponse.from(coupon),
+                        CouponPointsRuleSummaryResponse.from(rule)));
             });
         }
 
