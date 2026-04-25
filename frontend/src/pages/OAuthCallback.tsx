@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { message } from 'antd';
+import { resolveAssetUrl } from '../utils/url';
 
 function decodeJwtPayload(token: string) {
     const payloadPart = token.split('.')[1];
@@ -38,7 +39,11 @@ const OAuthCallback = () => {
                     email: payload.email || '',
                     roles: payload.roles || ['ROLE_USER'],
                     accessToken: token,
-                    tokenType: 'Bearer'
+                    tokenType: 'Bearer',
+                    fullName: payload.fullName || '',
+                    phoneNumber: payload.phoneNumber || '',
+                    address: payload.address || '',
+                    avatar: resolveAssetUrl(payload.avatar) || ''
                 });
                 message.success('登录成功！');
                 navigate('/');

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { User, PointsHistory } from '../../types';
+import { resolveAssetUrl } from '../../utils/url';
 
 interface ProfileInfoSectionProps {
     user: User | null;
@@ -20,6 +21,7 @@ const ProfileInfoSection: React.FC<ProfileInfoSectionProps> = ({
     onAvatarChange,
     onAvatarRemove
 }) => {
+    const avatarUrl = resolveAssetUrl(user?.avatar);
     const [profileForm, setProfileForm] = useState({
         fullName: '',
         phoneNumber: '',
@@ -31,6 +33,7 @@ const ProfileInfoSection: React.FC<ProfileInfoSectionProps> = ({
         const file = e.target.files?.[0];
         if (!file || !onAvatarChange) return;
         await onAvatarChange(file);
+        e.target.value = '';
     };
 
     useEffect(() => {
@@ -73,25 +76,32 @@ const ProfileInfoSection: React.FC<ProfileInfoSectionProps> = ({
                 <div className="flex flex-col md:flex-row items-center gap-8 mb-10 pb-10 border-b border-slate-100 dark:border-slate-800">
                     <div className="relative group">
                         <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-50 dark:border-slate-800 shadow-md">
-                            <img
-                                alt="用户头像"
-                                className="w-full h-full object-cover"
-                                src={user?.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDLWy4nRvzdwMEflfEcy-VsdRTdyRDszEX3k5UqIi3t0-pUKLh3ncOY2fo2M2x-5cPTiEHfvj-AmhRxvph0wpH3F0FTmTN3Zh8L3kh_AVgEAfiPWCbSGVdKApsC_0ihFxGybGZ2J40mZ0y2SDUPbZsBnI3KkFQKm4y26qRAKCDnIRbTTYx5-GVI75XcPhOWSiClCVFaThltNl09xR3SPJ9KdCCfkg2nT8AnTMG-n83il4GIL9oGVhnowxaHqOEtkUYqZcXnLiKm2lw'}
-                                width={128}
-                                height={128}
-                            />
+                            {avatarUrl ? (
+                                <img
+                                    alt="用户头像"
+                                    className="w-full h-full object-cover"
+                                    src={avatarUrl}
+                                    width={128}
+                                    height={128}
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-5xl" aria-hidden="true">person</span>
+                                </div>
+                            )}
                         </div>
                         <label className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-blue-600 transition-colors" htmlFor="avatar-upload">
                             <span className="material-symbols-outlined text-sm" aria-hidden="true">photo_camera</span>
-                            <input className="hidden" id="avatar-upload" type="file" onChange={handleAvatarChange} />
                         </label>
+                        <input className="hidden" id="avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={handleAvatarChange} />
                     </div>
                     <div className="flex-1 text-center md:text-left">
                         <h3 className="text-lg font-semibold mb-1">个人头像</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">支持 PNG、JPG 和 GIF，最大 5MB。</p>
                         <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                            <button className="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary/20 transition-colors" type="button">
-                                上传新头像</button>
+                            <label className="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary/20 transition-colors cursor-pointer" htmlFor="avatar-upload">
+                                上传新头像
+                            </label>
                             <button className="px-4 py-2 text-slate-500 text-sm font-medium hover:text-red-500 transition-colors" type="button" onClick={onAvatarRemove}>
                                 移除
                             </button>
@@ -241,3 +251,4 @@ const ProfileInfoSection: React.FC<ProfileInfoSectionProps> = ({
 };
 
 export default ProfileInfoSection;
+

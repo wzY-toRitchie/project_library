@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtils {
@@ -28,6 +29,13 @@ public class JwtUtils {
 
         return Jwts.builder()
                 .setSubject((userPrincipal.getUsername()))
+                .claim("id", userPrincipal.getId())
+                .claim("email", userPrincipal.getEmail())
+                .claim("fullName", userPrincipal.getFullName())
+                .claim("phoneNumber", userPrincipal.getPhoneNumber())
+                .claim("address", userPrincipal.getAddress())
+                .claim("avatar", userPrincipal.getAvatar())
+                .claim("roles", getRoles(userPrincipal))
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)
@@ -37,10 +45,23 @@ public class JwtUtils {
     public String generateJwtToken(UserDetailsImpl userDetails) {
         return Jwts.builder()
                 .setSubject((userDetails.getUsername()))
+                .claim("id", userDetails.getId())
+                .claim("email", userDetails.getEmail())
+                .claim("fullName", userDetails.getFullName())
+                .claim("phoneNumber", userDetails.getPhoneNumber())
+                .claim("address", userDetails.getAddress())
+                .claim("avatar", userDetails.getAvatar())
+                .claim("roles", getRoles(userDetails))
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    private List<String> getRoles(UserDetailsImpl userDetails) {
+        return userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .toList();
     }
 
     private Key key() {

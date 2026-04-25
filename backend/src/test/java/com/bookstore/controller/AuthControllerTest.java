@@ -124,7 +124,7 @@ class AuthControllerTest {
         user.setEmail(username + "@example.com");
         user.setPassword("encoded");
         user.setRole("USER");
-        return new UserDetailsImpl(id, username, user.getEmail(), null, null, null, user.getPassword(),
+        return new UserDetailsImpl(id, username, user.getEmail(), user.getPassword(), null, null, null, null,
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
 }

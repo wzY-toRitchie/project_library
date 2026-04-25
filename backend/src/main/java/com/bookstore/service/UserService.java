@@ -87,6 +87,7 @@ public class UserService {
                 user.getPhoneNumber(),
                 addressMap.get(user.getId()),
                 user.getRole(),
+                user.getAvatar(),
                 user.getCreateTime(),
                 countMap.getOrDefault(user.getId(), 0L))).toList();
     }
@@ -101,6 +102,7 @@ public class UserService {
                         user.getPhoneNumber(),
                         resolveDefaultAddress(user.getId()),
                         user.getRole(),
+                        user.getAvatar(),
                         user.getCreateTime(),
                         addressRepository.countByUserId(user.getId())));
     }
@@ -168,6 +170,20 @@ public class UserService {
             user.setPhoneNumber(request.getPhoneNumber());
         }
         return userRepository.save(Objects.requireNonNull(user));
+    }
+
+    public User updateAvatar(@NonNull Long userId, @NonNull String avatarUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setAvatar(avatarUrl);
+        return userRepository.save(user);
+    }
+
+    public User removeAvatar(@NonNull Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setAvatar(null);
+        return userRepository.save(user);
     }
 
     public void updatePassword(@NonNull Long userId,

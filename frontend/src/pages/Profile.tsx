@@ -17,6 +17,7 @@ import OrdersSection from '../components/profile/OrdersSection';
 import ProfileInfoSection from '../components/profile/ProfileInfoSection';
 import AddressSection from '../components/profile/AddressSection';
 import PasswordSection from '../components/profile/PasswordSection';
+import { resolveAssetUrl } from '../utils/url';
 
 type AddressItem = { id: number; fullName: string; phoneNumber: string; address: string; isDefault: boolean };
 
@@ -42,7 +43,14 @@ const Profile: React.FC = () => {
     const [pointsHistory, setPointsHistory] = useState<PointsHistory[]>([]);
     const [pointsLoading, setPointsLoading] = useState(false);
 
-    const fetchUserProfile = useCallback(async () => { try { setUserProfile((await api.get('/users/me')).data); } catch { message.error('获取用户信息失败'); } }, []);
+    const fetchUserProfile = useCallback(async () => {
+        try {
+            const profile = (await api.get('/users/me')).data;
+            setUserProfile({ ...profile, avatar: resolveAssetUrl(profile.avatar) || '' });
+        } catch {
+            message.error('获取用户信息失败');
+        }
+    }, []);
     const fetchOrders = useCallback(async () => { setLoading(true); try { const d = (await api.get('/orders/my')).data; setOrders(Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : []); } catch { message.error('获取订单列表失败'); setOrders([]); } finally { setLoading(false); } }, []);
     const fetchReviews = useCallback(async () => { if (!authUser?.id) return; try { setReviewedBooks(new Set((await api.get<Review[]>(`/reviews/user/${authUser.id}`)).data.map(r => r.book.id))); } catch { /* ignore */ } }, [authUser?.id]);
     const fetchPointsHistory = useCallback(async () => { setPointsLoading(true); try { setPointsHistory(await getPointsHistory()); } catch { message.error('获取积分历史失败'); } finally { setPointsLoading(false); } }, []);
@@ -57,7 +65,7 @@ const Profile: React.FC = () => {
     const fetchAddresses = useCallback(async () => { if (!authUser?.id) return; try { const r = await api.get('/users/addresses'); applyAddressList(Array.isArray(r.data) ? r.data : []); } catch (e) { message.error(getErrorMessage(e, '获取地址失败')); applyAddressList([]); } }, [authUser?.id, applyAddressList]);
     useEffect(() => { if (authUser?.id) fetchAddresses(); }, [authUser?.id, fetchAddresses]);
 
-    const handleUpdateProfile = async (data: Partial<User>) => { try { const r = await api.put('/users/profile', { ...userProfile, ...data }); setUserProfile(r.data); message.success('个人信息更新成功'); if (authUser) login({ ...authUser, ...r.data }); } catch (e) { message.error(getErrorMessage(e, '更新失败')); } };
+    const handleUpdateProfile = async (data: Partial<User>) => { try { const r = await api.put('/users/profile', { ...userProfile, ...data }); const updated = { ...r.data, avatar: resolveAssetUrl(r.data.avatar) || '' }; setUserProfile(updated); message.success('个人信息更新成功'); if (authUser) login({ ...authUser, ...updated }); } catch (e) { message.error(getErrorMessage(e, '更新失败')); } };
 
     const handleUpdateAddress = async (data: { id?: number; fullName: string; phoneNumber: string; address: string }) => {
         try {
@@ -79,7 +87,9 @@ const Profile: React.FC = () => {
             const response = await api.post('/users/avatar', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            setUserProfile(prev => prev ? { ...prev, avatar: response.data.avatar } : null);
+            const avatar = resolveAssetUrl(response.data.avatar) || '';
+            setUserProfile(prev => prev ? { ...prev, avatar } : null);
+            if (authUser) login({ ...authUser, avatar });
             message.success('头像上传成功');
         } catch (error: unknown) {
             message.error(getErrorMessage(error, '头像上传失败'));
@@ -89,6 +99,7 @@ const Profile: React.FC = () => {
         try {
             await api.delete('/users/avatar');
             setUserProfile(prev => prev ? { ...prev, avatar: '' } : null);
+            if (authUser) login({ ...authUser, avatar: '' });
             message.success('头像已删除');
         } catch (error: unknown) {
             message.error(getErrorMessage(error, '头像删除失败'));
@@ -120,3 +131,4 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
+

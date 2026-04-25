@@ -28,7 +28,25 @@ public class OAuth2AccountService {
         }
 
         return userRepository.findByEmail(email)
+                .map(user -> refreshOAuth2Profile(user, userInfo))
                 .orElseGet(() -> createNewOAuth2User(userInfo));
+    }
+
+    private User refreshOAuth2Profile(User user, GithubOAuth2UserInfo userInfo) {
+        boolean changed = false;
+        if ((user.getAvatar() == null || user.getAvatar().isBlank())
+                && userInfo.getAvatarUrl() != null
+                && !userInfo.getAvatarUrl().isBlank()) {
+            user.setAvatar(userInfo.getAvatarUrl());
+            changed = true;
+        }
+        if ((user.getFullName() == null || user.getFullName().isBlank())
+                && userInfo.getName() != null
+                && !userInfo.getName().isBlank()) {
+            user.setFullName(userInfo.getName());
+            changed = true;
+        }
+        return changed ? userRepository.save(user) : user;
     }
 
     private User createNewOAuth2User(GithubOAuth2UserInfo userInfo) {

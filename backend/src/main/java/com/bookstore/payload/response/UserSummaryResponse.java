@@ -10,11 +10,12 @@ public class UserSummaryResponse {
     private String phoneNumber;
     private String address;
     private String role;
+    private String avatar;
     private LocalDateTime createTime;
     private long addressCount;
 
     public UserSummaryResponse(Long id, String username, String email, String fullName, String phoneNumber,
-            String address, String role, LocalDateTime createTime, long addressCount) {
+            String address, String role, String avatar, LocalDateTime createTime, long addressCount) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -22,6 +23,7 @@ public class UserSummaryResponse {
         this.phoneNumber = phoneNumber;
         this.address = address;
         this.role = role;
+        this.avatar = avatar;
         this.createTime = createTime;
         this.addressCount = addressCount;
     }
@@ -80,6 +82,14 @@ public class UserSummaryResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 
     public LocalDateTime getCreateTime() {

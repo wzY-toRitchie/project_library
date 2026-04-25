@@ -83,6 +83,7 @@ public class AuthController {
           userDetails.getFullName(),
           userDetails.getPhoneNumber(),
           userDetails.getAddress(),
+          userDetails.getAvatar(),
           roles));
     } catch (org.springframework.security.authentication.BadCredentialsException e) {
       // 密码错误 - 记录失败次数

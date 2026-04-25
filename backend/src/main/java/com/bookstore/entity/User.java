@@ -36,6 +36,7 @@ public class User {
 
     private String role; // USER, ADMIN
 
+    @Column(length = 500)
     private String avatar;
 
     @Column(nullable = false)

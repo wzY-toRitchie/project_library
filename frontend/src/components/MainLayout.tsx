@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import SearchDropdown from './SearchDropdown';
 import { addToSearchHistory } from '../utils/searchHistory';
+import { resolveAssetUrl } from '../utils/url';
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -111,7 +112,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                         onClick={() => navigate('/profile')}
                                     >
                                         {user?.avatar ? (
-                                            <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover" width={32} height={32} />
+                                            <img src={resolveAssetUrl(user.avatar)} alt="avatar" className="w-8 h-8 rounded-full object-cover" width={32} height={32} />
                                         ) : (
                                             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person</span>
                                         )}

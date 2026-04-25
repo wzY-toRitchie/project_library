@@ -18,15 +18,32 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
 @Tag(name = "用户", description = "用户信息和账户管理接口")
 public class UserController {
+    private static final long MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+    private static final Set<String> ALLOWED_AVATAR_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".webp");
 
     @Autowired
     private UserService userService;
+
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
 
     @GetMapping("/{id}")
     @Operation(summary = "获取用户信息", description = "根据 ID 获取用户摘要信息")
@@ -115,6 +132,57 @@ public class UserController {
         return ResponseEntity.ok(summary != null ? summary : updatedUser);
     }
 
+    @PostMapping("/avatar")
+    @Operation(summary = "上传头像", description = "上传当前用户头像，支持 jpg/png/gif/webp 格式，最大 5MB")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("avatar") MultipartFile file) {
+        Long userId = getAuthenticatedUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Avatar file is required"));
+        }
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Avatar file must not exceed 5MB"));
+        }
+
+        String extension = resolveExtension(file.getOriginalFilename());
+        if (!ALLOWED_AVATAR_EXTENSIONS.contains(extension)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Only jpg/png/gif/webp avatar files are allowed"));
+        }
+
+        try {
+            Path avatarUploadDir = resolveUploadRoot().resolve("avatars");
+            Files.createDirectories(avatarUploadDir);
+            String filename = UUID.randomUUID().toString().replace("-", "") + extension;
+            Path target = avatarUploadDir.resolve(filename);
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, target);
+            }
+
+            String avatarUrl = "/uploads/avatars/" + filename;
+            userService.updateAvatar(userId, avatarUrl);
+            Map<String, String> response = new HashMap<>();
+            response.put("avatar", avatarUrl);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new MessageResponse("Avatar upload failed"));
+        }
+    }
+
+    @DeleteMapping("/avatar")
+    @Operation(summary = "移除头像", description = "移除当前用户头像")
+    public ResponseEntity<?> removeAvatar() {
+        Long userId = getAuthenticatedUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        userService.removeAvatar(userId);
+        Map<String, String> response = new HashMap<>();
+        response.put("avatar", "");
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "管理员更新用户", description = "管理员编辑用户资料")
     public ResponseEntity<?> updateUserByAdmin(@PathVariable @NonNull Long id,
@@ -142,5 +210,23 @@ public class UserController {
 
         userService.updatePassword(userId, request);
         return ResponseEntity.ok(new MessageResponse("Password updated successfully"));
+    }
+
+    private Long getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
+            return null;
+        }
+        return ((UserDetailsImpl) authentication.getPrincipal()).getId();
+    }
+
+    private String resolveExtension(String originalFilename) {
+        String originalName = Objects.requireNonNullElse(originalFilename, "");
+        int dotIndex = originalName.lastIndexOf('.');
+        return dotIndex >= 0 ? originalName.substring(dotIndex).toLowerCase() : "";
+    }
+
+    private Path resolveUploadRoot() {
+        return Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 }

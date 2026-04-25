@@ -60,6 +60,7 @@ class UserControllerAuthorizationTest {
                 "13800138000",
                 "Shanghai",
                 "USER",
+                null,
                 LocalDateTime.now(),
                 1L);
         when(userService.getUserSummary(1L)).thenReturn(Optional.of(summary));
