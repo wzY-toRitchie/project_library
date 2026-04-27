@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { message } from 'antd';
 import { getAiRecommendations } from '../api/ai';
 import type { AiRecommendation } from '../api/ai';
@@ -30,11 +30,8 @@ const AiRecommend: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [chat, setChat] = useState<ChatMessage[]>([]);
     const [mobileTab, setMobileTab] = useState<'chat' | 'recommend'>('chat');
-    const [hoveredRec, setHoveredRec] = useState<number | null>(null);
-
     const chatEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const navigate = useNavigate();
     const { addToCart } = useCart();
     const { isAuthenticated } = useAuth();
 
@@ -316,8 +313,6 @@ const AiRecommend: React.FC = () => {
                                     {lastRecommendations.map((rec, idx) => (
                                         <div
                                             key={rec.bookId}
-                                            onMouseEnter={() => setHoveredRec(rec.bookId)}
-                                            onMouseLeave={() => setHoveredRec(null)}
                                             className="group relative bg-white dark:bg-[#1e1c18] rounded-2xl 
                                                 border border-[#e8e0d8] dark:border-[#2d2a26]
                                                 hover:border-[#c05621]/50 dark:hover:border-[#c05621]/50

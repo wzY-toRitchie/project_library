@@ -1,5 +1,6 @@
 package com.bookstore.controller;
 
+import com.bookstore.config.AlipayConfig;
 import com.bookstore.entity.Order;
 import com.bookstore.enums.OrderStatus;
 import com.bookstore.exception.BadRequestException;
@@ -26,6 +27,9 @@ public class PaymentController {
 
     @Autowired
     private AlipayService alipayService;
+
+    @Autowired
+    private AlipayConfig alipayConfig;
 
     @Autowired
     private OrderService orderService;
@@ -133,6 +137,42 @@ public class PaymentController {
     }
 
     @Operation(summary = "退款", description = "退款给用户")
+    @GetMapping("/alipay-sandbox")
+    public ResponseEntity<Map<String, Object>> getAlipaySandboxStatus() {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权查看支付宝沙箱配置");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sandbox", alipayConfig.isSandbox());
+        result.put("gateway", alipayConfig.getGateway());
+        result.put("returnUrl", alipayConfig.getReturnUrl());
+        result.put("notifyUrl", alipayConfig.getNotifyUrl());
+        result.put("signType", alipayConfig.getSignType());
+        result.put("mockEnabled", alipayService.isSandboxMockEnabled());
+        result.put("effectiveMockMode", alipayService.shouldMockGateway());
+        result.put("gatewayConfigured", alipayService.isGatewayConfigured());
+        result.put("appIdConfigured", alipayService.isAppIdConfigured());
+        result.put("privateKeyConfigured", alipayService.isPrivateKeyConfigured());
+        result.put("alipayPublicKeyConfigured", alipayService.isAlipayPublicKeyConfigured());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/alipay-sandbox/mock")
+    public ResponseEntity<Map<String, Object>> updateAlipaySandboxMock(@RequestBody Map<String, Object> request) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权修改支付宝沙箱配置");
+        }
+
+        Object enabledValue = request.get("enabled");
+        if (!(enabledValue instanceof Boolean enabled)) {
+            throw new BadRequestException("enabled 必须是布尔值");
+        }
+
+        alipayService.setSandboxMockEnabled(enabled);
+        return getAlipaySandboxStatus();
+    }
+
     @PostMapping("/refund/{orderId}")
     public ResponseEntity<Map<String, Object>> refund(
             @Parameter(description = "订单 ID") @PathVariable Long orderId,

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { message } from 'antd';
 import api from '../api';
 import type { SystemSetting } from '../types';
 

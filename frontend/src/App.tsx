@@ -25,6 +25,7 @@ const AdminOrders = React.lazy(() => import('./pages/AdminOrders'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminCategories = React.lazy(() => import('./pages/AdminCategories'));
 const AdminSettings = React.lazy(() => import('./pages/AdminSettings'));
+const AdminAlipaySandbox = React.lazy(() => import('./pages/AdminAlipaySandbox'));
 const AdminCoupons = React.lazy(() => import('./pages/AdminCoupons'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const ContactSupport = React.lazy(() => import('./pages/ContactSupport'));
@@ -100,6 +101,7 @@ function App() {
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="alipay" element={<AdminAlipaySandbox />} />
                 <Route path="coupons" element={<AdminCoupons />} />
                 <Route path="points-rules" element={<AdminPointsRules />} />
                 <Route path="reviews" element={<AdminReviews />} />

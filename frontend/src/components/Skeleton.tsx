@@ -155,20 +155,17 @@ export const UserRowSkeleton: React.FC = () => (
 
 // 表格骨架屏
 export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({ rows = 5, cols = 5 }) => (
-    <div className="animate-pulse">
-        <div className="flex gap-4 mb-4 px-4">
-            {Array.from({ length: cols }).map((_, i) => (
-                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded flex-1" />
-            ))}
-        </div>
+    <>
         {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} className="flex gap-4 mb-3 px-4">
+            <tr key={i} className="animate-pulse">
                 {Array.from({ length: cols }).map((_, j) => (
-                    <div key={j} className="h-10 bg-gray-200 dark:bg-gray-700 rounded flex-1" />
+                    <td key={j} className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                    </td>
                 ))}
-            </div>
+            </tr>
         ))}
-    </div>
+    </>
 );
 
 // 文本骨架屏

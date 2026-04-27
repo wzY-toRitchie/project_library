@@ -79,6 +79,7 @@ const AdminLayout: React.FC = () => {
         { path: '/admin/coupons', icon: 'confirmation_number', label: '优惠券管理' },
         { path: '/admin/points-rules', icon: 'loyalty', label: '积分规则' },
         { path: '/admin/reviews', icon: 'reviews', label: '评价管理' },
+        { path: '/admin/alipay', icon: 'account_balance_wallet', label: '支付宝沙箱' },
         { path: '/admin/settings', icon: 'settings', label: '系统设置' },
     ];
 
@@ -91,6 +92,7 @@ const AdminLayout: React.FC = () => {
         '/admin/coupons': 'Coupon Management',
         '/admin/points-rules': 'Points Rules',
         '/admin/reviews': 'Review Management',
+        '/admin/alipay': 'Alipay Sandbox',
         '/admin/settings': 'System Settings',
     };
 

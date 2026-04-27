@@ -9,7 +9,7 @@ interface RelatedBooksProps {
     categoryText: string;
 }
 
-const RelatedBooks: React.FC<RelatedBooksProps> = ({ currentBookId, categoryText }) => {
+const RelatedBooks: React.FC<RelatedBooksProps> = ({ currentBookId }) => {
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
 

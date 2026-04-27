@@ -42,6 +42,7 @@ public class AlipayService {
     private OrderRepository orderRepository;
 
     private AlipayClient alipayClient;
+    private volatile boolean sandboxMockEnabled = true;
 
     @PostConstruct
     public void init() {
@@ -61,6 +62,17 @@ public class AlipayService {
      * 创建支付订单，返回 HTML 表单
      */
     public String createPayment(Order order) throws AlipayApiException {
+        if (shouldMockGateway()) {
+            order.setPaymentMethod("MOCK_ALIPAY");
+            orderRepository.save(order);
+            logger.warn("Alipay sandbox mock payment form generated for order {}", order.getId());
+            return """
+                    <form action="%s" method="GET">
+                        <input type="hidden" name="out_trade_no" value="%s" />
+                    </form>
+                    """.formatted(alipayConfig.getReturnUrl(), order.getId());
+        }
+
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
         request.setReturnUrl(alipayConfig.getReturnUrl());
         request.setNotifyUrl(alipayConfig.getNotifyUrl());
@@ -89,6 +101,19 @@ public class AlipayService {
      * 查询订单支付状态
      */
     public String queryOrder(Long orderId) throws AlipayApiException {
+        if (shouldMockGateway()) {
+            orderRepository.findById(orderId).ifPresent(order -> {
+                if (order.getStatus() == OrderStatus.PENDING) {
+                    order.setStatus(OrderStatus.PAID);
+                    order.setPaymentMethod("MOCK_ALIPAY");
+                    order.setPaymentTime(LocalDateTime.now());
+                    orderRepository.save(order);
+                }
+            });
+            logger.warn("Alipay sandbox mock query returns TRADE_SUCCESS for order {}", orderId);
+            return "TRADE_SUCCESS";
+        }
+
         AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
         AlipayTradeQueryModel model = new AlipayTradeQueryModel();
         model.setOutTradeNo(orderId.toString());
@@ -108,6 +133,11 @@ public class AlipayService {
      * 关闭订单
      */
     public boolean closeOrder(Long orderId) throws AlipayApiException {
+        if (shouldMockGateway()) {
+            logger.warn("Alipay sandbox mock close succeeds for order {}", orderId);
+            return true;
+        }
+
         AlipayTradeCloseRequest request = new AlipayTradeCloseRequest();
         AlipayTradeCloseModel model = new AlipayTradeCloseModel();
         model.setOutTradeNo(orderId.toString());
@@ -141,11 +171,34 @@ public class AlipayService {
         return response.isSuccess();
     }
 
-    private boolean shouldMockGateway() {
-        return alipayConfig.isSandbox()
-                && (!hasText(alipayConfig.getAppId())
-                || !hasText(alipayConfig.getPrivateKey())
-                || !hasText(alipayConfig.getAlipayPublicKey()));
+    public boolean shouldMockGateway() {
+        return alipayConfig.isSandbox() && sandboxMockEnabled;
+    }
+
+    public boolean isSandboxMockEnabled() {
+        return sandboxMockEnabled;
+    }
+
+    public void setSandboxMockEnabled(boolean sandboxMockEnabled) {
+        this.sandboxMockEnabled = sandboxMockEnabled;
+    }
+
+    public boolean isGatewayConfigured() {
+        return hasText(alipayConfig.getAppId())
+                && hasText(alipayConfig.getPrivateKey())
+                && hasText(alipayConfig.getAlipayPublicKey());
+    }
+
+    public boolean isAppIdConfigured() {
+        return hasText(alipayConfig.getAppId());
+    }
+
+    public boolean isPrivateKeyConfigured() {
+        return hasText(alipayConfig.getPrivateKey());
+    }
+
+    public boolean isAlipayPublicKeyConfigured() {
+        return hasText(alipayConfig.getAlipayPublicKey());
     }
 
     private boolean hasText(String value) {

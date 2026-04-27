@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api';
 import type { Book } from '../types';
 import BookCard from '../components/BookCard';
@@ -7,7 +7,6 @@ import { BookGridSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 
 const NewArrivals: React.FC = () => {
-    const navigate = useNavigate();
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [sortBy, setSortBy] = useState('newest');

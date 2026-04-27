@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import type { Book, Category, Coupon } from '../types';
-import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { BookGridSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import StarRating from '../components/StarRating';
 import BookCard from '../components/BookCard';
 import CategoryTabs from '../components/CategoryTabs';
 import Rankings from '../components/home/Rankings';
@@ -39,7 +37,6 @@ const Home: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     const [sortOption, setSortOption] = useState('newest');
-    const { addToCart } = useCart();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -181,11 +178,6 @@ const Home: React.FC = () => {
             observer.disconnect();
         };
     }, [books]);
-
-    const handleAddToCart = (book: Book) => {
-        addToCart(book);
-        message.success(`${book.title} 已加入购物车`);
-    };
 
     const handleClaimCoupon = async (couponId: number) => {
         try {

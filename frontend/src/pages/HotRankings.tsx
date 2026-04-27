@@ -2,7 +2,6 @@
 import { Link } from 'react-router-dom';
 import api from '../api';
 import type { Book } from '../types';
-import BookCard from '../components/BookCard';
 import { FALLBACK_COVER } from '../utils/constants';
 import StarRating from '../components/StarRating';
 

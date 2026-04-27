@@ -1,5 +1,4 @@
 ﻿import React from 'react';
-import { Link } from 'react-router-dom';
 
 const About: React.FC = () => (
     <div className="max-w-3xl mx-auto px-4 py-16">
