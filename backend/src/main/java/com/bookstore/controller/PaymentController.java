@@ -143,17 +143,24 @@ public class PaymentController {
 
         try {
             Order order = orderService.getOrderById(orderId);
-            if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CANCELLED) {
+            if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
                 throw new BadRequestException("当前订单状态不支持退款");
             }
 
             BigDecimal refundAmount = parseRefundAmount(amount, order.getTotalPrice());
             boolean success = alipayService.refund(orderId, refundAmount);
+            if (success) {
+                Order refundedOrder = orderService.markOrderRefunded(orderId, refundAmount);
+                if (refundedOrder != null) {
+                    order = refundedOrder;
+                }
+            }
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", success);
             result.put("orderId", orderId);
             result.put("refundAmount", refundAmount);
+            result.put("status", order.getStatus());
 
             return ResponseEntity.ok(result);
         } catch (ResourceNotFoundException | BadRequestException e) {
@@ -170,7 +177,11 @@ public class PaymentController {
         }
 
         try {
-            return new BigDecimal(amount);
+            BigDecimal refundAmount = new BigDecimal(amount);
+            if (refundAmount.compareTo(BigDecimal.ZERO) <= 0 || refundAmount.compareTo(totalPrice) > 0) {
+                throw new BadRequestException("退款金额必须大于0且不能超过订单金额");
+            }
+            return refundAmount;
         } catch (NumberFormatException e) {
             throw new BadRequestException("退款金额格式无效");
         }

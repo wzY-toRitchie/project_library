@@ -6,8 +6,8 @@ import OrderTimeline from '../components/OrderTimeline';
 import { FALLBACK_COVER } from '../utils/constants';
 import { message } from 'antd';
 
-const statusLabel: Record<string, string> = { PENDING: '待支付', PAID: '已支付', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' };
-const statusColor: Record<string, string> = { PENDING: 'bg-amber-100 text-amber-700', PAID: 'bg-blue-100 text-blue-700', SHIPPED: 'bg-purple-100 text-purple-700', COMPLETED: 'bg-emerald-100 text-emerald-700', CANCELLED: 'bg-red-100 text-red-700' };
+const statusLabel: Record<string, string> = { PENDING: '待支付', PAID: '已支付', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消', REFUND_REQUESTED: '退款申请中', REFUNDED: '已退款', REFUND_REJECTED: '退款已拒绝' };
+const statusColor: Record<string, string> = { PENDING: 'bg-amber-100 text-amber-700', PAID: 'bg-blue-100 text-blue-700', SHIPPED: 'bg-purple-100 text-purple-700', COMPLETED: 'bg-emerald-100 text-emerald-700', CANCELLED: 'bg-red-100 text-red-700', REFUND_REQUESTED: 'bg-orange-100 text-orange-700', REFUNDED: 'bg-emerald-100 text-emerald-700', REFUND_REJECTED: 'bg-rose-100 text-rose-700' };
 
 const OrderDetail: React.FC = () => {
     const { id } = useParams();

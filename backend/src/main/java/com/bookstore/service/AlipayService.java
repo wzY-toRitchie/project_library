@@ -123,6 +123,11 @@ public class AlipayService {
      * 退款
      */
     public boolean refund(Long orderId, BigDecimal refundAmount) throws AlipayApiException {
+        if (shouldMockGateway()) {
+            logger.warn("Alipay sandbox credentials are not configured; mock refund succeeds for order {}", orderId);
+            return true;
+        }
+
         AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
         AlipayTradeRefundModel model = new AlipayTradeRefundModel();
         model.setOutTradeNo(orderId.toString());
@@ -134,6 +139,17 @@ public class AlipayService {
         logger.info("Refund response: {}", response.getBody());
 
         return response.isSuccess();
+    }
+
+    private boolean shouldMockGateway() {
+        return alipayConfig.isSandbox()
+                && (!hasText(alipayConfig.getAppId())
+                || !hasText(alipayConfig.getPrivateKey())
+                || !hasText(alipayConfig.getAlipayPublicKey()));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     /**

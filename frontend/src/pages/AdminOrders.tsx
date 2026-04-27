@@ -4,13 +4,17 @@ import { message, Modal } from 'antd';
 import type { Order } from '../types';
 import { TableSkeleton } from '../components/Skeleton';
 import { TableEmpty } from '../components/EmptyState';
+import { refundPayment } from '../api/payment';
 
 const statusText: Record<string, string> = {
     PENDING: '待支付',
     PAID: '已支付',
     SHIPPED: '已发货',
     COMPLETED: '已完成',
-    CANCELLED: '已取消'
+    CANCELLED: '已取消',
+    REFUND_REQUESTED: '退款申请中',
+    REFUNDED: '已退款',
+    REFUND_REJECTED: '退款已拒绝'
 };
 
 const statusStyles: Record<string, string> = {
@@ -18,14 +22,17 @@ const statusStyles: Record<string, string> = {
     PAID: 'bg-blue-50 text-blue-700',
     SHIPPED: 'bg-indigo-50 text-indigo-700',
     COMPLETED: 'bg-emerald-50 text-emerald-700',
-    CANCELLED: 'bg-rose-50 text-rose-700'
+    CANCELLED: 'bg-rose-50 text-rose-700',
+    REFUND_REQUESTED: 'bg-orange-50 text-orange-700',
+    REFUNDED: 'bg-emerald-50 text-emerald-700',
+    REFUND_REJECTED: 'bg-rose-50 text-rose-700'
 };
 
 const AdminOrders: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'REFUND_REJECTED'>('all');
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -65,7 +72,7 @@ const AdminOrders: React.FC = () => {
     }, [orders, searchQuery, statusFilter]);
 
     const counts = useMemo(() => {
-        const base = { PENDING: 0, PAID: 0, SHIPPED: 0, COMPLETED: 0, CANCELLED: 0 };
+        const base = { PENDING: 0, PAID: 0, SHIPPED: 0, COMPLETED: 0, CANCELLED: 0, REFUND_REQUESTED: 0, REFUNDED: 0, REFUND_REJECTED: 0 };
         orders.forEach(order => {
             if (base[order.status as keyof typeof base] !== undefined) {
                 base[order.status as keyof typeof base] += 1;
@@ -88,6 +95,35 @@ const AdminOrders: React.FC = () => {
     const cancelOrder = async (orderId: number) => {
         if (!window.confirm('确定要取消该订单吗？')) return;
         updateStatus(orderId, 'CANCELLED');
+    };
+
+    const approveRefund = async (order: Order) => {
+        if (!window.confirm(`确定同意订单 ORD-${String(order.id).padStart(6, '0')} 的退款申请吗？`)) return;
+        try {
+            const result = await refundPayment(order.id, String(order.totalPrice || 0));
+            if (result.success) {
+                message.success('退款已处理');
+                fetchOrders();
+            } else {
+                message.error('支付网关未完成退款');
+            }
+        } catch (error) {
+            console.error('Failed to refund order:', error);
+            message.error('退款处理失败');
+        }
+    };
+
+    const rejectRefund = async (order: Order) => {
+        const reason = window.prompt('请输入拒绝退款原因');
+        if (reason === null) return;
+        try {
+            await api.post(`/orders/${order.id}/refund-reject`, { reason });
+            message.success('已拒绝退款申请');
+            fetchOrders();
+        } catch (error) {
+            console.error('Failed to reject refund:', error);
+            message.error('拒绝退款失败');
+        }
     };
 
     const openDetails = (order: Order) => {
@@ -208,7 +244,7 @@ const AdminOrders: React.FC = () => {
                     />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    {(['all', 'PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED'] as const).map(status => (
+                    {(['all', 'PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED', 'REFUND_REQUESTED', 'REFUNDED', 'REFUND_REJECTED'] as const).map(status => (
                         <button
                             key={status}
                             onClick={() => setStatusFilter(status)}
@@ -383,6 +419,22 @@ const AdminOrders: React.FC = () => {
                                                             完成
                                                         </button>
                                                     )}
+                                                    {order.status === 'REFUND_REQUESTED' && (
+                                                        <>
+                                                            <button
+                                                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-600 text-white hover:bg-orange-700"
+                                                                onClick={() => approveRefund(order)}
+                                                            >
+                                                                同意退款
+                                                            </button>
+                                                            <button
+                                                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                                onClick={() => rejectRefund(order)}
+                                                            >
+                                                                拒绝
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -421,6 +473,18 @@ const AdminOrders: React.FC = () => {
                                     {statusText[selectedOrder.status] || selectedOrder.status}
                                 </span>
                             </div>
+                            {selectedOrder.refundReason && (
+                                <div className="flex flex-col gap-1 sm:col-span-2">
+                                    <span className="text-xs text-slate-400">退款原因</span>
+                                    <span className="text-sm">{selectedOrder.refundReason}</span>
+                                </div>
+                            )}
+                            {selectedOrder.refundRejectReason && (
+                                <div className="flex flex-col gap-1 sm:col-span-2">
+                                    <span className="text-xs text-slate-400">拒绝原因</span>
+                                    <span className="text-sm">{selectedOrder.refundRejectReason}</span>
+                                </div>
+                            )}
                         </div>
                         <div className="border border-slate-200 rounded-lg overflow-hidden">
                             <table className="w-full text-left text-sm">

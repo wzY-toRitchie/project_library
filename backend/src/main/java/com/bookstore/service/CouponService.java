@@ -68,6 +68,15 @@ public class CouponService {
         return couponRepository.findAll();
     }
 
+    public Coupon getCouponById(Long id) {
+        return couponRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("优惠券不存在"));
+    }
+
+    public Optional<CouponPointsRule> getPointsRuleForCoupon(Long couponId) {
+        return couponPointsRuleRepository.findByCouponId(couponId);
+    }
+
     /**
      * 获取用户优惠券
      */
@@ -271,6 +280,9 @@ public class CouponService {
 
         UserCoupon userCoupon = new UserCoupon(user, coupon);
         userCouponRepository.save(userCoupon);
+
+        coupon.setUsedCount(coupon.getUsedCount() + 1);
+        couponRepository.save(coupon);
 
         couponPointsRuleRepository.incrementTotalRedeemed(rule.getId());
 

@@ -5,7 +5,10 @@ public enum OrderStatus {
     PAID("已支付"),
     SHIPPED("已发货"),
     COMPLETED("已完成"),
-    CANCELLED("已取消");
+    CANCELLED("已取消"),
+    REFUND_REQUESTED("退款申请中"),
+    REFUNDED("已退款"),
+    REFUND_REJECTED("退款已拒绝");
 
     private final String description;
 

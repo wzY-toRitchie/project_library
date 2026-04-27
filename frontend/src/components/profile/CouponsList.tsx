@@ -1,188 +1,261 @@
-import React, { useState, useEffect } from 'react';
-import { getMyCoupons, getAvailableCoupons, claimCoupon } from '../../api/coupons';
-import type { UserCoupon, Coupon } from '../../types';
+import React, { useEffect, useMemo, useState } from 'react';
 import { message } from 'antd';
+import { getMyCoupons, getAvailableCoupons, claimCoupon } from '../../api/coupons';
+import { getRedeemableCoupons, redeemCoupon } from '../../api/points';
+import type { Coupon, RedeemableCoupon, UserCoupon } from '../../types';
 import EmptyState from '../EmptyState';
 
-const CouponsList: React.FC = () => {
+type CouponTab = 'my' | 'available' | 'redeem';
+
+interface CouponsListProps {
+    userPoints: number;
+    onPointsRefresh?: () => void | Promise<void>;
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    const data = (error as { response?: { data?: unknown } })?.response?.data;
+    if (typeof data === 'string') return data;
+    if (data && typeof data === 'object' && 'message' in data) {
+        return String((data as { message?: unknown }).message || fallback);
+    }
+    return fallback;
+};
+
+const formatDate = (date: unknown) => {
+    if (!date) return '-';
+    if (Array.isArray(date)) {
+        const [year, month, day] = date;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    return new Date(date as string).toLocaleDateString('zh-CN');
+};
+
+const formatMoney = (value?: number) => `¥${Number(value || 0).toFixed(2)}`;
+
+const formatCouponValue = (coupon?: Coupon) => {
+    if (!coupon) return '-';
+    if (coupon.type === 'DISCOUNT') return `${(Number(coupon.value) * 10).toFixed(1).replace(/\.0$/, '')}折`;
+    if (coupon.type === 'FREE_SHIPPING') return '包邮';
+    return formatMoney(coupon.value);
+};
+
+const getCouponCondition = (coupon?: Coupon) => {
+    if (!coupon || !coupon.minAmount || Number(coupon.minAmount) <= 0) return '无门槛';
+    return `满 ${formatMoney(coupon.minAmount)} 可用`;
+};
+
+const getStatusLabel = (status: UserCoupon['status']) => {
+    if (status === 'USED') return '已使用';
+    if (status === 'EXPIRED') return '已过期';
+    return '未使用';
+};
+
+const CouponCard: React.FC<{
+    coupon?: Coupon;
+    disabled?: boolean;
+    badge?: string;
+    meta?: React.ReactNode;
+    action?: React.ReactNode;
+}> = ({ coupon, disabled, badge, meta, action }) => (
+    <div className={`relative bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${disabled ? 'opacity-60 border-slate-200 dark:border-slate-700' : 'border-primary/30'}`}>
+        <div className="flex min-h-32">
+            <div className={`w-28 flex-shrink-0 flex flex-col items-center justify-center p-4 ${disabled ? 'bg-slate-100 dark:bg-slate-700' : 'bg-primary/10'}`}>
+                <span className={`text-2xl font-bold ${disabled ? 'text-slate-400' : 'text-primary'}`}>{formatCouponValue(coupon)}</span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">{coupon?.type === 'DISCOUNT' ? '折扣券' : coupon?.type === 'FREE_SHIPPING' ? '包邮券' : '满减券'}</span>
+            </div>
+            <div className="flex-1 min-w-0 p-4">
+                <h3 className="font-semibold text-slate-900 dark:text-white truncate">{coupon?.name}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{getCouponCondition(coupon)}</p>
+                <p className="text-xs text-slate-400 mt-2">有效期至 {formatDate(coupon?.endTime)}</p>
+                {meta && <div className="mt-3">{meta}</div>}
+            </div>
+            {action && <div className="flex items-center pr-4">{action}</div>}
+        </div>
+        {badge && (
+            <div className="absolute top-2 right-2 px-2 py-1 bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 text-xs rounded">
+                {badge}
+            </div>
+        )}
+    </div>
+);
+
+const CouponsList: React.FC<CouponsListProps> = ({ userPoints, onPointsRefresh }) => {
     const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([]);
     const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+    const [redeemableCoupons, setRedeemableCoupons] = useState<RedeemableCoupon[]>([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'my' | 'available'>('my');
+    const [actionLoading, setActionLoading] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<CouponTab>('my');
 
-    useEffect(() => {
-        const fetchCoupons = async () => {
-            setLoading(true);
-            try {
-                const [myData, availableData] = await Promise.all([
-                    getMyCoupons(),
-                    getAvailableCoupons()
-                ]);
-                setMyCoupons(myData);
-                setAvailableCoupons(availableData);
-            } catch (error) {
-                console.error('Failed to fetch coupons:', error);
-                message.error('获取优惠券失败');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchCoupons();
-    }, []);
-
-    const handleClaim = async (couponId: number) => {
+    const fetchCoupons = async () => {
+        setLoading(true);
         try {
-            await claimCoupon(couponId);
-            message.success('领取成功');
-            // Refresh lists
-            const [myData, availableData] = await Promise.all([
+            const [myData, availableData, redeemData] = await Promise.all([
                 getMyCoupons(),
-                getAvailableCoupons()
+                getAvailableCoupons(),
+                getRedeemableCoupons(),
             ]);
             setMyCoupons(myData);
             setAvailableCoupons(availableData);
-        } catch (error: unknown) {
-            const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '领取失败';
-            message.error(errMsg);
+            setRedeemableCoupons(redeemData);
+        } catch (error) {
+            message.error(getErrorMessage(error, '获取优惠券失败'));
+        } finally {
+            setLoading(false);
         }
     };
 
-    const formatDate = (date: unknown) => {
-        if (!date) return '-';
-        if (Array.isArray(date)) {
-            const [year, month, day] = date;
-            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    useEffect(() => {
+        fetchCoupons();
+    }, []);
+
+    const unusedCount = useMemo(() => myCoupons.filter(item => item.status === 'UNUSED' && item.available).length, [myCoupons]);
+
+    const handleClaim = async (couponId: number) => {
+        setActionLoading(couponId);
+        try {
+            await claimCoupon(couponId);
+            message.success('领取成功');
+            await fetchCoupons();
+            setActiveTab('my');
+        } catch (error) {
+            message.error(getErrorMessage(error, '领取失败'));
+        } finally {
+            setActionLoading(null);
         }
-        return new Date(date as string).toLocaleDateString();
+    };
+
+    const handleRedeem = async (couponId: number) => {
+        setActionLoading(couponId);
+        try {
+            await redeemCoupon(couponId);
+            message.success('兑换成功，优惠券已放入我的券包');
+            await onPointsRefresh?.();
+            await fetchCoupons();
+            setActiveTab('my');
+        } catch (error) {
+            message.error(getErrorMessage(error, '兑换失败'));
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
     }
 
     return (
         <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">我的优惠券</h2>
-
-            {/* Tabs */}
-            <div className="flex gap-4 mb-6">
-                <button
-                    onClick={() => setActiveTab('my')}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'my' ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                >
-                    我的优惠券 ({myCoupons.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab('available')}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'available' ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                >
-                    可领取优惠券 ({availableCoupons.length})
-                </button>
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">当前积分</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{userPoints}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">可用优惠券</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{unusedCount}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">可兑换券</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{redeemableCoupons.length}</p>
+                </div>
             </div>
 
-            {/* My Coupons */}
+            <div className="flex flex-wrap gap-3 mb-6">
+                {[
+                    { key: 'my', label: `我的券 (${myCoupons.length})` },
+                    { key: 'available', label: `可领取 (${availableCoupons.length})` },
+                    { key: 'redeem', label: `积分兑换 (${redeemableCoupons.length})` },
+                ].map(item => (
+                    <button
+                        key={item.key}
+                        onClick={() => setActiveTab(item.key as CouponTab)}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            activeTab === item.key
+                                ? 'bg-primary text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+
             {activeTab === 'my' && (
                 myCoupons.length === 0 ? (
-                    <EmptyState
-                        icon="default"
-                        title="暂无优惠券"
-                        description="还没有任何优惠券，去看看可领取的优惠券吧"
-                    />
+                    <EmptyState icon="default" title="暂无优惠券" description="可领取或使用积分兑换优惠券" />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {myCoupons.map((item) => (
-                            <div
+                        {myCoupons.map(item => (
+                            <CouponCard
                                 key={item.id}
-                                className={`relative bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${item.status !== 'UNUSED' ? 'opacity-60 border-slate-200 dark:border-slate-700' : 'border-primary/30'}`}
-                            >
-                                <div className="flex">
-                                    <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center p-4 ${item.status !== 'UNUSED' ? 'bg-slate-100 dark:bg-slate-700' : 'bg-primary/10'}`}>
-                                        <span className={`text-2xl font-bold ${item.status !== 'UNUSED' ? 'text-slate-400' : 'text-primary'}`}>
-                                            {item.coupon?.type === 'DISCOUNT'
-                                                ? `${item.coupon.value}折`
-                                                : item.coupon?.type === 'FULL_REDUCE'
-                                                    ? `¥${item.coupon?.value}`
-                                                    : '包邮'
-                                            }
-                                        </span>
-                                    </div>
-                                    <div className="flex-1 p-4">
-                                        <h3 className="font-semibold text-slate-900 dark:text-white">{item.coupon?.name}</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            {item.coupon?.minAmount
-                                                ? `满¥${item.coupon.minAmount}可用`
-                                                : '无门槛'
-                                            }
-                                        </p>
-                                        <p className="text-xs text-slate-400 mt-2">
-                                            有效期至: {formatDate(item.coupon?.endTime)}
-                                        </p>
-                                    </div>
-                                    {item.status !== 'UNUSED' && (
-                                        <div className="absolute top-2 right-2 px-2 py-1 bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 text-xs rounded">
-                                            已使用
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                                coupon={item.coupon}
+                                disabled={item.status !== 'UNUSED' || !item.available}
+                                badge={item.status === 'UNUSED' && item.available ? undefined : getStatusLabel(item.status)}
+                                meta={<span className="text-xs text-slate-400">获得时间 {formatDate(item.getTime)}</span>}
+                            />
                         ))}
                     </div>
                 )
             )}
 
-            {/* Available Coupons */}
             {activeTab === 'available' && (
                 availableCoupons.length === 0 ? (
-                    <EmptyState
-                        icon="default"
-                        title="暂无可领取优惠券"
-                        description="当前没有可领取的优惠券，敬请期待"
-                    />
+                    <EmptyState icon="default" title="暂无可领取优惠券" description="当前没有可直接领取的优惠券" />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {availableCoupons.map((coupon) => (
-                            <div
+                        {availableCoupons.map(coupon => (
+                            <CouponCard
                                 key={coupon.id}
-                                className="bg-white dark:bg-slate-800 rounded-xl border border-dashed border-primary/50 overflow-hidden"
-                            >
-                                <div className="flex">
-                                    <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center p-4 bg-primary/10">
-                                        <span className="text-2xl font-bold text-primary">
-                                            {coupon.type === 'DISCOUNT'
-                                                ? `${coupon.value}折`
-                                                : coupon.type === 'FULL_REDUCE'
-                                                    ? `¥${coupon.value}`
-                                                    : '包邮'
-                                            }
-                                        </span>
-                                    </div>
-                                    <div className="flex-1 p-4">
-                                        <h3 className="font-semibold text-slate-900 dark:text-white">{coupon.name}</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            {coupon.minAmount
-                                                ? `满¥${coupon.minAmount}可用`
-                                                : '无门槛'
-                                            }
-                                        </p>
-                                        <p className="text-xs text-slate-400 mt-2">
-                                            有效期至: {formatDate(coupon.endTime)}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center pr-4">
-                                        <button
-                                            onClick={() => handleClaim(coupon.id)}
-                                            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                                        >
-                                            立即领取
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                coupon={coupon}
+                                action={
+                                    <button
+                                        onClick={() => handleClaim(coupon.id)}
+                                        disabled={actionLoading === coupon.id}
+                                        className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                    >
+                                        {actionLoading === coupon.id ? '领取中' : '领取'}
+                                    </button>
+                                }
+                            />
                         ))}
+                    </div>
+                )
+            )}
+
+            {activeTab === 'redeem' && (
+                redeemableCoupons.length === 0 ? (
+                    <EmptyState icon="default" title="暂无可兑换优惠券" description="管理员尚未配置积分兑换券" />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {redeemableCoupons.map(({ coupon, pointsRule }) => {
+                            const disabled = userPoints < pointsRule.pointsCost;
+                            return (
+                                <CouponCard
+                                    key={coupon.id}
+                                    coupon={coupon}
+                                    meta={
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <span className="text-sm font-bold text-red-500">{pointsRule.pointsCost} 积分</span>
+                                            <span className="text-xs text-slate-400">每日限兑 {pointsRule.maxDailyRedeem} 张</span>
+                                        </div>
+                                    }
+                                    action={
+                                        <button
+                                            onClick={() => handleRedeem(coupon.id)}
+                                            disabled={disabled || actionLoading === coupon.id}
+                                            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {disabled ? '积分不足' : actionLoading === coupon.id ? '兑换中' : '兑换'}
+                                        </button>
+                                    }
+                                />
+                            );
+                        })}
                     </div>
                 )
             )}

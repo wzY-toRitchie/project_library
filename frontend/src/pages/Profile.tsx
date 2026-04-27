@@ -108,6 +108,7 @@ const Profile: React.FC = () => {
     const handleOpenReview = (book: Book) => { setSelectedBook(book); setIsReviewModalOpen(true); };
     const handleDeleteOrder = async (orderId: number) => { if (!window.confirm('确定要删除该订单吗？此操作不可恢复。')) return; try { await api.delete(`/orders/${orderId}`); message.success('订单删除成功'); setOrders(p => p.filter(o => o.id !== orderId)); } catch (e) { message.error(getErrorMessage(e, '删除订单失败')); } };
     const handleConfirmReceipt = async (orderId: number) => { if (!window.confirm('确认收到商品了吗？')) return; try { await api.patch(`/orders/${orderId}/status`, null, { params: { status: 'COMPLETED' } }); message.success('已确认收货，您可以进行评价了'); setOrders(p => p.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o)); } catch { message.error('确认收货失败'); } };
+    const handleRequestRefund = async (orderId: number, reason: string) => { try { const r = await api.post(`/orders/${orderId}/refund-request`, { reason }); message.success('退款申请已提交'); setOrders(p => p.map(o => o.id === orderId ? r.data : o)); } catch (e) { message.error(getErrorMessage(e, '申请退款失败')); } };
     const handleBuyAgain = (book: Book) => { addToCart(book); message.success('已加入购物车'); navigate('/cart'); };
 
     return (
@@ -115,14 +116,14 @@ const Profile: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-8">
                 <ProfileSidebar activeSection={activeSection} onSectionChange={(s) => setActiveSection(s as typeof activeSection)} userPoints={userPoints} signedInToday={signedInToday} onSignIn={handleSignIn} />
                 <section className="flex-1">
-                    {activeSection === 'orders' && <OrdersSection orders={orders} loading={loading} reviewedBooks={reviewedBooks} onOpenReview={handleOpenReview} onDeleteOrder={handleDeleteOrder} onConfirmReceipt={handleConfirmReceipt} onBuyAgain={handleBuyAgain} />}
+                    {activeSection === 'orders' && <OrdersSection orders={orders} loading={loading} reviewedBooks={reviewedBooks} onOpenReview={handleOpenReview} onDeleteOrder={handleDeleteOrder} onConfirmReceipt={handleConfirmReceipt} onRequestRefund={handleRequestRefund} onBuyAgain={handleBuyAgain} />}
                     {activeSection === 'profile' && <ProfileInfoSection user={userProfile} addressForm={addressForm} pointsHistory={pointsHistory} pointsLoading={pointsLoading} onUpdate={handleUpdateProfile} onAvatarChange={handleAvatarChange} onAvatarRemove={handleAvatarRemove} />}
                     {activeSection === 'address' && <AddressSection addresses={addresses} onUpdate={handleUpdateAddress} onSetDefault={handleSetDefaultAddress} onDelete={handleDeleteAddress} />}
                     {activeSection === 'password' && <PasswordSection onUpdate={handleUpdatePassword} />}
                     {activeSection === 'favorites' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的收藏</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您收藏的图书。</p></div><div className="p-8"><FavoritesList /></div></div>}
                     {activeSection === 'history' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">浏览历史</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看您最近浏览过的图书。</p></div><div className="p-8"><BrowsingHistoryList /></div></div>}
-                    {activeSection === 'coupons' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的优惠券</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看和管理您的优惠券。</p></div><div className="p-8"><CouponsList /></div></div>}
-                    {activeSection === 'points' && <PointsCenterSection userPoints={userPoints} onPointsRefresh={fetchUserPoints} />}
+                    {activeSection === 'coupons' && <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"><div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">我的优惠券</h2><p className="text-slate-500 dark:text-slate-400 mt-1">查看、领取并使用积分兑换优惠券。</p></div><div className="p-8"><CouponsList userPoints={userPoints} onPointsRefresh={fetchUserPoints} /></div></div>}
+                    {activeSection === 'points' && <PointsCenterSection userPoints={userPoints} />}
                 </section>
             </div>
             <ReviewModal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} book={selectedBook} onSuccess={() => { fetchReviews(); setIsReviewModalOpen(false); }} />
@@ -131,4 +132,3 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
-

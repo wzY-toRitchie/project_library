@@ -36,6 +36,11 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({
     ];
 
     const isCancelled = status === 'CANCELLED';
+    const refundInfo: Record<string, { icon: string; title: string; description: string; className: string }> = {
+        REFUND_REQUESTED: { icon: 'pending_actions', title: '退款申请中', description: '管理员正在处理退款申请', className: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400' },
+        REFUNDED: { icon: 'assignment_returned', title: '已退款', description: '该订单已完成退款', className: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' },
+        REFUND_REJECTED: { icon: 'do_not_disturb_on', title: '退款已拒绝', description: '该订单的退款申请未通过', className: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400' }
+    };
 
     if (isCancelled) {
         return (
@@ -44,6 +49,19 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({
                 <div>
                     <p className="font-semibold text-red-700 dark:text-red-400">订单已取消</p>
                     <p className="text-sm text-red-500 dark:text-red-400">此订单已被取消</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (refundInfo[status]) {
+        const info = refundInfo[status];
+        return (
+            <div className={`flex items-center gap-3 p-4 rounded-lg border ${info.className}`}>
+                <span className="material-symbols-outlined text-2xl" aria-hidden="true">{info.icon}</span>
+                <div>
+                    <p className="font-semibold">{info.title}</p>
+                    <p className="text-sm">{info.description}</p>
                 </div>
             </div>
         );

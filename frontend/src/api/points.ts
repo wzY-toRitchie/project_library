@@ -1,5 +1,5 @@
 import api from './index';
-import type { PointsHistory, UserPoints, PointsRuleResponse } from '../types';
+import type { PointsHistory, UserPoints, PointsRuleResponse, RedeemableCoupon } from '../types';
 
 // 获取用户积分余额
 export const getUserPoints = async (): Promise<UserPoints> => {
@@ -26,7 +26,7 @@ export const getSignInStatus = async (): Promise<boolean> => {
 };
 
 // 获取可积分兑换的优惠券列表
-export const getRedeemableCoupons = async (): Promise<{ coupon: any; pointsRule: any }[]> => {
+export const getRedeemableCoupons = async (): Promise<RedeemableCoupon[]> => {
     const response = await api.get('/coupons/redeem');
     return response.data;
 };

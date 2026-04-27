@@ -3,6 +3,7 @@ package com.bookstore.controller;
 import com.bookstore.entity.Coupon;
 import com.bookstore.entity.UserCoupon;
 import com.bookstore.payload.request.CouponPointsRuleRequest;
+import com.bookstore.payload.response.CouponAdminResponse;
 import com.bookstore.payload.response.PublicCouponResponse;
 import com.bookstore.payload.response.RedeemableCouponResponse;
 import com.bookstore.payload.response.UserCouponResponse;
@@ -43,8 +44,22 @@ public class CouponController {
     @Operation(summary = "获取所有优惠券", description = "管理员获取全部优惠券列表（含已下架）")
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Coupon>> getAllCoupons() {
-        return ResponseEntity.ok(couponService.getAllCoupons());
+    public ResponseEntity<List<CouponAdminResponse>> getAllCoupons() {
+        List<CouponAdminResponse> coupons = couponService.getAllCoupons().stream()
+                .map(coupon -> CouponAdminResponse.from(
+                        coupon,
+                        couponService.getPointsRuleForCoupon(coupon.getId()).orElse(null)))
+                .toList();
+        return ResponseEntity.ok(coupons);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CouponAdminResponse> getCoupon(@PathVariable("id") Long id) {
+        Coupon coupon = couponService.getCouponById(id);
+        return ResponseEntity.ok(CouponAdminResponse.from(
+                coupon,
+                couponService.getPointsRuleForCoupon(id).orElse(null)));
     }
 
     @Operation(summary = "获取我的优惠券", description = "获取当前用户所有已领取的优惠券")

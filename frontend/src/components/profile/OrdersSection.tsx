@@ -11,6 +11,7 @@ interface OrdersSectionProps {
     onOpenReview: (book: Book) => void;
     onDeleteOrder: (orderId: number) => void;
     onConfirmReceipt: (orderId: number) => void;
+    onRequestRefund: (orderId: number, reason: string) => void;
     onBuyAgain: (book: Book) => void;
 }
 
@@ -21,12 +22,14 @@ export function OrdersSection({
     onOpenReview,
     onDeleteOrder,
     onConfirmReceipt,
+    onRequestRefund,
     onBuyAgain,
 }: OrdersSectionProps) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [orderFilter, setOrderFilter] = useState<string>('all');
     const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+    const refundableStatuses = new Set(['PAID', 'SHIPPED', 'COMPLETED', 'REFUND_REJECTED']);
 
     const filteredOrders = useMemo(() => {
         let result = orders;
@@ -68,14 +71,22 @@ export function OrdersSection({
         let pendingShipment = 0;
         let pendingReceipt = 0;
         let pendingReview = 0;
+        let refundRequests = 0;
         for (const o of orders) {
             if (o.status === 'PENDING') pendingPayment++;
             else if (o.status === 'PAID') pendingShipment++;
             else if (o.status === 'SHIPPED') pendingReceipt++;
             else if (o.status === 'COMPLETED' && o.items?.some((item) => item.book && !reviewedBooks.has(item.book.id))) pendingReview++;
+            else if (o.status === 'REFUND_REQUESTED') refundRequests++;
         }
-        return { pendingPayment, pendingShipment, pendingReceipt, pendingReview };
+        return { pendingPayment, pendingShipment, pendingReceipt, pendingReview, refundRequests };
     }, [orders, reviewedBooks]);
+
+    const handleRequestRefund = (orderId: number) => {
+        const reason = window.prompt('请输入退款原因');
+        if (reason === null) return;
+        onRequestRefund(orderId, reason);
+    };
 
     return (
         <>
@@ -129,6 +140,13 @@ export function OrdersSection({
                         待评价
                         {orderCounts.pendingReview > 0 && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-600 text-[10px] rounded-full font-bold">{orderCounts.pendingReview}</span>}
                     </button>
+                    <button
+                        onClick={() => setOrderFilter('REFUND_REQUESTED')}
+                        className={`px-6 py-4 text-sm font-medium whitespace-nowrap relative ${orderFilter === 'REFUND_REQUESTED' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-primary'}`}
+                    >
+                        退款中
+                        {orderCounts.refundRequests > 0 && <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] rounded-full font-bold">{orderCounts.refundRequests}</span>}
+                    </button>
                 </div>
 
                 <div className="p-1 min-h-[400px]">
@@ -178,6 +196,14 @@ export function OrdersSection({
                                                 className="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full hover:bg-green-700 transition-colors"
                                             >
                                                 确认收货
+                                            </button>
+                                        )}
+                                        {refundableStatuses.has(order.status) && (
+                                            <button
+                                                onClick={() => handleRequestRefund(order.id)}
+                                                className="px-3 py-1 bg-orange-600 text-white text-xs font-bold rounded-full hover:bg-orange-700 transition-colors"
+                                            >
+                                                申请退款
                                             </button>
                                         )}
                                         <button

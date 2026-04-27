@@ -28,7 +28,7 @@ public class Order {
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 32, columnDefinition = "varchar(32)")
     private OrderStatus status = OrderStatus.PENDING;
 
     @Column(name = "create_time")
@@ -54,6 +54,21 @@ public class Order {
 
     @Column(name = "payment_time")
     private LocalDateTime paymentTime;
+
+    @Column(name = "refund_reason", length = 1000)
+    private String refundReason;
+
+    @Column(name = "refund_reject_reason", length = 1000)
+    private String refundRejectReason;
+
+    @Column(name = "refund_request_time")
+    private LocalDateTime refundRequestTime;
+
+    @Column(name = "refund_processed_time")
+    private LocalDateTime refundProcessedTime;
+
+    @Column(name = "refund_amount")
+    private BigDecimal refundAmount;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @JsonManagedReference

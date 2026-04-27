@@ -143,6 +143,28 @@ public class OrderController {
         return ResponseEntity.ok(cancelledOrder);
     }
 
+    @PostMapping("/{id}/refund-request")
+    public ResponseEntity<Order> requestRefund(
+            @Parameter(description = "订单 ID") @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.isAdmin();
+        String reason = requestBody != null ? requestBody.get("reason") : null;
+        return ResponseEntity.ok(orderService.requestRefund(id, currentUserId, isAdmin, reason));
+    }
+
+    @PostMapping("/{id}/refund-reject")
+    public ResponseEntity<Order> rejectRefund(
+            @Parameter(description = "订单 ID") @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ForbiddenException("无权处理退款申请");
+        }
+
+        String reason = requestBody != null ? requestBody.get("reason") : null;
+        return ResponseEntity.ok(orderService.rejectRefund(id, reason));
+    }
+
     @Operation(summary = "批量更新订单状态", description = "批量修改多个订单的状态（管理员）")
     @PostMapping("/batch/status")
     public ResponseEntity<?> batchUpdateOrderStatus(@RequestBody Map<String, Object> request) {

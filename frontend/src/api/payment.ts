@@ -19,7 +19,7 @@ export const closePayment = async (orderId: number): Promise<{ success: boolean 
 };
 
 // 退款
-export const refundPayment = async (orderId: number, amount?: string): Promise<{ success: boolean }> => {
+export const refundPayment = async (orderId: number, amount?: string): Promise<{ success: boolean; status?: string }> => {
     const response = await api.post(`/payment/refund/${orderId}`, null, {
         params: { amount: amount || '0' }
     });

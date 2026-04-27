@@ -22,6 +22,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -247,6 +248,58 @@ public class OrderService {
     }
 
     @Transactional
+    public Order requestRefund(@NonNull Long orderId, @NonNull Long userId, boolean isAdmin, String reason) {
+        Order order = getOrderForAccess(orderId, userId, isAdmin);
+
+        if (!canRequestRefund(order.getStatus())) {
+            throw new BadRequestException("当前订单状态不支持申请退款");
+        }
+
+        order.setStatus(OrderStatus.REFUND_REQUESTED);
+        order.setRefundReason(trimToNull(reason));
+        order.setRefundRejectReason(null);
+        order.setRefundRequestTime(LocalDateTime.now());
+        order.setRefundProcessedTime(null);
+
+        try {
+            notificationRepository.save(new Notification("ORDER", "订单退款申请 #" + orderId));
+        } catch (Exception e) {
+            logger.warn("发送退款申请通知失败 orderId=" + orderId, e);
+        }
+
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order rejectRefund(@NonNull Long orderId, String reason) {
+        Order order = getOrderById(orderId);
+
+        if (order.getStatus() != OrderStatus.REFUND_REQUESTED) {
+            throw new BadRequestException("只有退款申请中的订单才能拒绝退款");
+        }
+
+        order.setStatus(OrderStatus.REFUND_REJECTED);
+        order.setRefundRejectReason(trimToNull(reason));
+        order.setRefundProcessedTime(LocalDateTime.now());
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order markOrderRefunded(@NonNull Long orderId, @NonNull BigDecimal refundAmount) {
+        Order order = getOrderById(orderId);
+
+        if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
+            throw new BadRequestException("当前订单状态不支持退款");
+        }
+
+        restoreStock(order);
+        order.setStatus(OrderStatus.REFUNDED);
+        order.setRefundAmount(refundAmount);
+        order.setRefundProcessedTime(LocalDateTime.now());
+        return orderRepository.save(order);
+    }
+
+    @Transactional
     public void deleteOrder(@NonNull Long id) {
         orderRepository.deleteById(id);
     }
@@ -303,10 +356,41 @@ public class OrderService {
         }
         return switch (currentStatus) {
             case PENDING -> newStatus == OrderStatus.PAID || newStatus == OrderStatus.CANCELLED;
-            case PAID -> newStatus == OrderStatus.SHIPPED;
-            case SHIPPED -> newStatus == OrderStatus.COMPLETED;
-            case COMPLETED, CANCELLED -> false;
+            case PAID -> newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.REFUND_REQUESTED;
+            case SHIPPED -> newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.REFUND_REQUESTED;
+            case COMPLETED -> newStatus == OrderStatus.REFUND_REQUESTED;
+            case REFUND_REQUESTED -> newStatus == OrderStatus.REFUNDED || newStatus == OrderStatus.REFUND_REJECTED;
+            case REFUND_REJECTED -> newStatus == OrderStatus.REFUND_REQUESTED;
+            case CANCELLED, REFUNDED -> false;
         };
+    }
+
+    private boolean canRequestRefund(OrderStatus status) {
+        return status == OrderStatus.PAID
+                || status == OrderStatus.SHIPPED
+                || status == OrderStatus.COMPLETED
+                || status == OrderStatus.REFUND_REJECTED;
+    }
+
+    private void restoreStock(Order order) {
+        if (order.getItems() == null) {
+            return;
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Book book = item.getBook();
+            if (book != null && book.getId() != null && item.getQuantity() != null) {
+                bookRepository.increaseStock(book.getId(), item.getQuantity());
+            }
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

@@ -21,6 +21,9 @@ export function getStatusColor(status: string): string {
         case 'PAID': return 'bg-indigo-100 text-indigo-600';
         case 'SHIPPED': return 'bg-amber-100 text-amber-600';
         case 'CANCELLED': return 'bg-slate-100 text-slate-600';
+        case 'REFUND_REQUESTED': return 'bg-orange-100 text-orange-700';
+        case 'REFUNDED': return 'bg-emerald-100 text-emerald-700';
+        case 'REFUND_REJECTED': return 'bg-rose-100 text-rose-700';
         default: return 'bg-slate-100 text-slate-600';
     }
 }
@@ -35,6 +38,9 @@ export function getStatusText(status: string): string {
         case 'PAID': return '待发货';
         case 'SHIPPED': return '已发货';
         case 'CANCELLED': return '已取消';
+        case 'REFUND_REQUESTED': return '退款申请中';
+        case 'REFUNDED': return '已退款';
+        case 'REFUND_REJECTED': return '退款已拒绝';
         default: return status;
     }
 }

@@ -52,6 +52,11 @@ export interface Order {
     totalPrice: number;
     status: string;
     createTime: string;
+    refundReason?: string;
+    refundRejectReason?: string;
+    refundRequestTime?: string;
+    refundProcessedTime?: string;
+    refundAmount?: number;
     items: OrderItem[];
     user?: OrderUser;
 }
@@ -124,6 +129,7 @@ export interface Coupon {
     status: string;
     createTime: string;
     available: boolean;
+    pointsRule?: CouponPointsRule | null;
 }
 
 export interface UserCoupon {
@@ -145,11 +151,16 @@ export interface PointsRuleResponse {
 }
 
 export interface CouponPointsRule {
-    id: number;
-    couponId: number;
+    id?: number;
+    couponId?: number;
     pointsCost: number;
     maxDailyRedeem: number;
-    totalRedeemed: number;
-    createTime: string;
-    updateTime: string;
+    totalRedeemed?: number;
+    createTime?: string;
+    updateTime?: string;
+}
+
+export interface RedeemableCoupon {
+    coupon: Coupon;
+    pointsRule: CouponPointsRule;
 }
