@@ -55,8 +55,12 @@ const Register: React.FC = () => {
             await api.post('/auth/send-code', { email: formValues.email });
             message.success('验证码已发送，请查收邮件');
             setCountdown(60);
-        } catch (error: any) {
-            message.error(error.response?.data?.message || '发送失败，请重试');
+        } catch (error) {
+            let errorMessage = '发送失败，请重试';
+            if (axios.isAxiosError(error)) {
+                errorMessage = error.response?.data?.message || errorMessage;
+            }
+            message.error(errorMessage);
         } finally {
             setSendingCode(false);
         }
@@ -184,7 +188,7 @@ const Register: React.FC = () => {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="verificationCode">
                                 验证码
                             </label>
                             <div className="flex gap-2">
@@ -194,7 +198,11 @@ const Register: React.FC = () => {
                                     </span>
                                     <input
                                         className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
+                                        id="verificationCode"
+                                        name="verificationCode"
                                         type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
                                         maxLength={6}
                                         value={verificationCode}
                                         onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
