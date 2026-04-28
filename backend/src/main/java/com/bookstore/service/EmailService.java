@@ -6,12 +6,16 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Random;
+import com.bookstore.exception.BadRequestException;
+
+import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class EmailService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Value("${app.email.mock:true}")
     private boolean mockMode;
@@ -52,7 +56,7 @@ public class EmailService {
     /**
      * 发送验证码
      * @param email 目标邮箱
-     * @throws RuntimeException 频率限制或发送失败
+     * @throws BadRequestException 频率限制或发送失败
      */
     public void sendVerificationCode(String email) {
         // 检查发送频率限制（如果已有验证码已过期则不限制）
@@ -60,7 +64,7 @@ public class EmailService {
         if (existingEntry == null || !existingEntry.isExpired()) {
             LocalDateTime lastSend = lastSendTime.get(email);
             if (lastSend != null && LocalDateTime.now().isBefore(lastSend.plusSeconds(sendIntervalSeconds))) {
-                throw new RuntimeException("发送过于频繁，请稍后再试");
+                throw new BadRequestException("发送过于频繁，请稍后再试");
             }
         }
 
@@ -110,7 +114,7 @@ public class EmailService {
      * 生成 6 位数字验证码
      */
     private String generateCode() {
-        return String.format("%06d", new Random().nextInt(1000000));
+        return String.format("%06d", SECURE_RANDOM.nextInt(1000000));
     }
 
     /**
