@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { message } from 'antd';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -19,10 +19,48 @@ const Register: React.FC = () => {
         acceptedTerms: false
     });
 
+    const [verificationCode, setVerificationCode] = useState('');
+    const [countdown, setCountdown] = useState(0);
+    const [sendingCode, setSendingCode] = useState(false);
+
     const strength = useMemo(() => getPasswordStrength(formValues.password), [formValues.password]);
 
     const strengthLabel = getPasswordStrengthLabel(strength);
     const strengthColor = strength >= 4 ? 'text-green-500' : strength >= 3 ? 'text-yellow-500' : strength >= 2 ? 'text-orange-500' : 'text-red-500';
+
+    useEffect(() => {
+        if (countdown <= 0) return;
+
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [countdown]);
+
+    const handleSendCode = async () => {
+        if (!formValues.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formValues.email)) {
+            message.error('请输入正确的邮箱地址');
+            return;
+        }
+
+        setSendingCode(true);
+        try {
+            await api.post('/auth/send-code', { email: formValues.email });
+            message.success('验证码已发送，请查收邮件');
+            setCountdown(60);
+        } catch (error: any) {
+            message.error(error.response?.data?.message || '发送失败，请重试');
+        } finally {
+            setSendingCode(false);
+        }
+    };
 
     const onFinish = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -36,6 +74,10 @@ const Register: React.FC = () => {
         }
         if (password !== confirm) {
             message.error('两次输入的密码不一致');
+            return;
+        }
+        if (!verificationCode) {
+            message.error('请输入验证码');
             return;
         }
         if (!formValues.acceptedTerms) {
@@ -64,7 +106,8 @@ const Register: React.FC = () => {
                 username,
                 email,
                 password,
-                role: ["user"]
+                role: ["user"],
+                verificationCode
             });
             message.success('注册成功，请登录');
             navigate('/login');
@@ -138,6 +181,38 @@ const Register: React.FC = () => {
                                     value={formValues.email}
                                     onChange={(event) => setFormValues(prev => ({ ...prev, email: event.target.value }))}
                                 />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                验证码
+                            </label>
+                            <div className="flex gap-2">
+                                <div className="relative group flex-1">
+                                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" aria-hidden="true">
+                                        pin
+                                    </span>
+                                    <input
+                                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors dark:text-white"
+                                        type="text"
+                                        maxLength={6}
+                                        value={verificationCode}
+                                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="请输入6位验证码"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleSendCode}
+                                    disabled={countdown > 0 || sendingCode}
+                                    className={`px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                                        countdown > 0 || sendingCode
+                                            ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-primary/90 shadow-md shadow-primary/20'
+                                    }`}
+                                >
+                                    {sendingCode ? '发送中...' : countdown > 0 ? `重新发送(${countdown}s)` : '发送验证码'}
+                                </button>
                             </div>
                         </div>
                         <div>
