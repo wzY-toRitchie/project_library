@@ -25,6 +25,11 @@ public class SignupRequest {
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$", message = "密码必须包含至少一个大写字母、一个小写字母和一个数字")
     private String password;
 
+    @Schema(description = "邮箱验证码", example = "123456")
+    @NotBlank(message = "验证码不能为空")
+    @Size(min = 6, max = 6, message = "验证码必须为6位")
+    private String verificationCode;
+
     public String getUsername() {
         return username;
     }
@@ -47,5 +52,13 @@ public class SignupRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getVerificationCode() {
+        return verificationCode;
+    }
+
+    public void setVerificationCode(String verificationCode) {
+        this.verificationCode = verificationCode;
     }
 }
