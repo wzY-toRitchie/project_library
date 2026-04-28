@@ -9,6 +9,7 @@ import com.bookstore.repository.UserRepository;
 import com.bookstore.security.jwt.JwtUtils;
 import com.bookstore.security.services.UserDetailsImpl;
 import com.bookstore.service.EmailService;
+import com.bookstore.exception.BadRequestException;
 import com.bookstore.service.LoginAttemptService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -128,8 +129,11 @@ public class AuthController {
     try {
       emailService.sendVerificationCode(email);
       return ResponseEntity.ok(new MessageResponse("验证码已发送"));
-    } catch (RuntimeException e) {
+    } catch (BadRequestException e) {
       return ResponseEntity.status(429).body(new MessageResponse(e.getMessage()));
+    } catch (Exception e) {
+      logger.error("Failed to send verification code to {}: {}", email, e.getMessage(), e);
+      return ResponseEntity.status(500).body(new MessageResponse("验证码发送失败，请稍后重试"));
     }
   }
 
@@ -140,6 +144,7 @@ public class AuthController {
     if (!emailService.verifyCode(signUpRequest.getEmail(), signUpRequest.getVerificationCode())) {
       return ResponseEntity.badRequest().body(new MessageResponse("验证码无效或已过期"));
     }
+    emailService.removeCode(signUpRequest.getEmail());  // 立即消耗验证码
 
     if (userRepository.existsByUsername(signUpRequest.getUsername())) {
       return ResponseEntity
@@ -160,9 +165,6 @@ public class AuthController {
     user.setRole("USER"); // Default role
 
     userRepository.save(user);
-
-    // 清除已使用的验证码
-    emailService.removeCode(signUpRequest.getEmail());
 
     return ResponseEntity.ok(new MessageResponse("注册成功"));
   }
