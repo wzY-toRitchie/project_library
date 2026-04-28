@@ -8,6 +8,7 @@ import com.bookstore.payload.response.MessageResponse;
 import com.bookstore.repository.UserRepository;
 import com.bookstore.security.jwt.JwtUtils;
 import com.bookstore.security.services.UserDetailsImpl;
+import com.bookstore.service.EmailService;
 import com.bookstore.service.LoginAttemptService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,9 @@ public class AuthController {
 
   @Autowired
   LoginAttemptService loginAttemptService;
+
+  @Autowired
+  EmailService emailService;
 
   @Operation(summary = "用户登录", description = "使用用户名和密码登录，返回 JWT Token")
   @PostMapping("/signin")
@@ -104,9 +109,38 @@ public class AuthController {
     }
   }
 
-  @Operation(summary = "用户注册", description = "注册新用户，需要用户名、邮箱和密码")
+  @Operation(summary = "发送验证码", description = "向指定邮箱发送注册验证码")
+  @PostMapping("/send-code")
+  public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
+    String email = request.get("email");
+
+    // 校验邮箱格式
+    if (email == null || !email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+      return ResponseEntity.badRequest().body(new MessageResponse("邮箱格式不正确"));
+    }
+
+    // 检查邮箱是否已注册
+    if (userRepository.existsByEmail(email)) {
+      // 为防止枚举攻击，返回统一消息
+      return ResponseEntity.ok(new MessageResponse("验证码已发送"));
+    }
+
+    try {
+      emailService.sendVerificationCode(email);
+      return ResponseEntity.ok(new MessageResponse("验证码已发送"));
+    } catch (RuntimeException e) {
+      return ResponseEntity.status(429).body(new MessageResponse(e.getMessage()));
+    }
+  }
+
+  @Operation(summary = "用户注册", description = "注册新用户，需要用户名、邮箱、密码和验证码")
   @PostMapping("/signup")
   public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    // 校验验证码
+    if (!emailService.verifyCode(signUpRequest.getEmail(), signUpRequest.getVerificationCode())) {
+      return ResponseEntity.badRequest().body(new MessageResponse("验证码无效或已过期"));
+    }
+
     if (userRepository.existsByUsername(signUpRequest.getUsername())) {
       return ResponseEntity
           .badRequest()
@@ -127,6 +161,9 @@ public class AuthController {
 
     userRepository.save(user);
 
-    return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    // 清除已使用的验证码
+    emailService.removeCode(signUpRequest.getEmail());
+
+    return ResponseEntity.ok(new MessageResponse("注册成功"));
   }
 }
