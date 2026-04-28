@@ -26,8 +26,8 @@ public class SignupRequest {
     private String password;
 
     @Schema(description = "邮箱验证码", example = "123456")
-    @NotBlank(message = "验证码不能为空")
-    @Size(min = 6, max = 6, message = "验证码必须为6位")
+    @NotBlank
+    @Size(min = 6, max = 6)
     private String verificationCode;
 
     public String getUsername() {
