@@ -20,7 +20,7 @@ backend/effective-pom.xml
 # IDE
 .idea/
 *.iml
-.vscode/settings.json
+.vscode/
 .settings/
 .classpath
 .project
